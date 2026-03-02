@@ -2,7 +2,27 @@
 
 A split-pane canvas UI skill for [OpenClaw](https://github.com/grp06/openclaw). Chat on the left, interactive canvas on the right.
 
-Outlet automatically instructs your agent to render structured data (lists, dashboards, kanban boards, spreadsheets, detail views, markdown, images, iframes) as interactive canvas blocks — no prompt engineering required.
+![Spreadsheet view — 24 months of revenue data rendered as a sortable table](assets/spreadsheet-demo.png)
+
+![Kanban view — investor report project broken into phases with clickable cards](assets/kanban-demo.png)
+
+## Why Outlet?
+
+Traditional agent UIs are chat-only: the agent describes data in plain text, and you scroll through walls of markdown. Outlet changes the paradigm — **your OpenClaw agent now drives a real UI**.
+
+Instead of summarizing 24 months of revenue data in a paragraph, the agent renders a full spreadsheet. Instead of listing project tasks in bullet points, it produces an interactive kanban board. Instead of describing metrics, it builds a live dashboard with charts.
+
+**You don't need to build features anymore.** The agent decides what visualization fits the data and renders it on the fly. Need a project tracker? Just ask. Need a data comparison table? Just ask. The canvas handles presentation; the agent handles intelligence. Every canvas element can include a `prompt` field — click a kanban card, and it sends a follow-up question to the agent automatically. The UI becomes conversational.
+
+This also means OpenClaw can monitor and surface information proactively. The same canvas protocol that renders a spreadsheet today can power alerts, status boards, and live dashboards tomorrow — all without writing a single line of feature code.
+
+## Status
+
+**Outlet is currently in test phase.** We're actively using it, iterating on the canvas protocol, and squashing bugs. We plan to publish it to [ClawHub](https://github.com/openclaw/clawhub) once stable.
+
+More visualization types are coming — and contributions are very welcome. If you have ideas for new canvas body types (timeline, graph, calendar, etc.), open a PR or an issue.
+
+We're also working towards **remote access**, so you'll be able to connect to Outlet from anywhere, not just localhost.
 
 ## Quick Start
 
@@ -15,7 +35,7 @@ Outlet automatically instructs your agent to render structured data (lists, dash
 
 ```bash
 # Clone the repo
-git clone https://github.com/<your-username>/outlet.git
+git clone https://github.com/guillaumeang/outlet.git
 cd outlet
 
 # Install dependencies
@@ -38,6 +58,8 @@ Copy `.env.example` to `.env.local` and adjust as needed:
 ## How It Works
 
 Outlet wraps each message with context that tells the agent about the canvas panel. The agent responds with standard chat text **plus** fenced `` ```canvas `` blocks containing JSON. These blocks are automatically extracted and rendered in the right pane.
+
+No prompt engineering needed — Outlet injects the canvas protocol automatically. The agent learns the available visualization types and decides when to use them based on the data.
 
 ### Canvas Types
 
@@ -85,6 +107,17 @@ npm run e2e        # E2E tests (playwright)
 ```
 
 > **Note**: The dev server uses `node server/index.js --dev`, not `next dev` directly. This starts a Node proxy that bridges WebSocket connections to the upstream gateway.
+
+## Contributing
+
+We'd love help expanding Outlet's capabilities. Some ideas:
+
+- **New canvas types** — timeline, graph/network, calendar, tree view, code editor
+- **Canvas interactivity** — sorting, filtering, inline editing
+- **Remote access** — connecting to Outlet over the network
+- **Mobile layout** — responsive pane switching
+
+Open an issue or PR on GitHub.
 
 ## Tech Stack
 
