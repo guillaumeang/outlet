@@ -2,9 +2,14 @@
 
 A split-pane canvas UI skill for [OpenClaw](https://github.com/grp06/openclaw). Chat on the left, interactive canvas on the right. Inspired by [OpenClaw Studio](https://github.com/grp06/openclaw-studio).
 
-![Spreadsheet view — 24 months of revenue data rendered as a sortable table](assets/spreadsheet-demo.png)
-
+### Kanban Board
 ![Kanban view — investor report project broken into phases with clickable cards](assets/kanban-demo.png)
+
+### Dashboard with Combo Chart
+![Dashboard view — revenue vs marketing spend rendered as a combo bar+line chart with KPI metrics](assets/graph-demo.png)
+
+### Spreadsheet
+![Spreadsheet view — 24 months of revenue data rendered as a sortable table](assets/spreadsheet-demo.png)
 
 ## Why Outlet?
 
