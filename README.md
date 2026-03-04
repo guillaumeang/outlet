@@ -1,6 +1,8 @@
 # 🔌 Outlet
 
-A split-pane canvas UI skill for [OpenClaw](https://github.com/grp06/openclaw). Chat on the left, interactive canvas on the right. Inspired by [OpenClaw Studio](https://github.com/grp06/openclaw-studio).
+Your [OpenClaw](https://github.com/grp06/openclaw) agents can now communicate through rich, interactive UI. No need to build features anymore — your agents are running the show.
+
+Outlet gives your agents a split-pane canvas alongside the chat. Instead of describing data in plain text, the agent renders spreadsheets, kanban boards, dashboards, and charts on the fly. You ask a question, and the agent decides the best way to visualize the answer. Every canvas element can be clickable, turning the UI into a conversation. The agent handles the intelligence; Outlet handles the presentation.
 
 ### Kanban Board
 ![Kanban view — investor report project broken into phases with clickable cards](assets/kanban-demo.png)
@@ -141,6 +143,10 @@ Open an issue or PR on GitHub.
 - **Zod** for canvas payload validation
 - **Recharts** for dashboard charts
 - **lucide-react** icons
+
+## Acknowledgements
+
+Inspired by [OpenClaw Studio](https://github.com/grp06/openclaw-studio).
 
 ## License
 
