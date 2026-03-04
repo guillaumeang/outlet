@@ -1,6 +1,6 @@
 # 🔌 Outlet
 
-A split-pane canvas UI skill for [OpenClaw](https://github.com/grp06/openclaw). Chat on the left, interactive canvas on the right.
+A split-pane canvas UI skill for [OpenClaw](https://github.com/grp06/openclaw). Chat on the left, interactive canvas on the right. Inspired by [OpenClaw Studio](https://github.com/grp06/openclaw-studio).
 
 ![Spreadsheet view — 24 months of revenue data rendered as a sortable table](assets/spreadsheet-demo.png)
 
@@ -29,23 +29,32 @@ We're also working towards **remote access**, so you'll be able to connect to Ou
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) 18+
-- An OpenClaw gateway running (default: `ws://localhost:18789`)
+- [OpenClaw](https://github.com/grp06/openclaw) installed with a gateway running (default: `ws://localhost:18789`)
 
-### Install & Run
+### 1. Install the skill
+
+Clone Outlet into your OpenClaw skills directory:
 
 ```bash
-# Clone the repo
-git clone https://github.com/guillaumeang/outlet.git
-cd outlet
+# Clone into the OpenClaw skills folder
+git clone https://github.com/guillaumeang/outlet.git ~/.openclaw/skills/outlet
 
-# Install dependencies
+# Register it in your workspace so your agent knows about it
+mkdir -p ~/.openclaw/workspace/skills
+ln -s ~/.openclaw/skills/outlet ~/.openclaw/workspace/skills/outlet
+```
+
+### 2. Install dependencies & run
+
+```bash
+cd ~/.openclaw/skills/outlet
 npm install
-
-# Start the dev server
 npm run dev
 ```
 
-Open **http://localhost:3000** and connect to your gateway.
+### 3. Connect
+
+Open **http://localhost:3000**, enter your gateway URL and token, and start chatting. The agent will automatically use the canvas when it has structured data to show.
 
 ### Environment Variables (optional)
 

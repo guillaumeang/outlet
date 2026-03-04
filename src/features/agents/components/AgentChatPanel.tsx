@@ -1085,6 +1085,10 @@ export const AgentChatPanel = ({
   onResolveExecApproval,
 }: AgentChatPanelProps) => {
   const [draftValue, setDraftValue] = useState(agent.draft);
+  const promptHistoryRef = useRef<string[]>([]);
+  const historyIndexRef = useRef(-1);
+  const savedDraftRef = useRef("");
+  const historyInitRef = useRef(false);
   const [newSessionBusy, setNewSessionBusy] = useState(false);
   const [renameEditing, setRenameEditing] = useState(false);
   const [renameSaving, setRenameSaving] = useState(false);
@@ -1133,6 +1137,28 @@ export const AgentChatPanel = ({
     setDraftValue("");
   }, [agent.agentId, agent.draft, agent.sessionKey]);
 
+  // Seed prompt history from existing outputLines (user messages start with "> ")
+  useEffect(() => {
+    if (historyInitRef.current) return;
+    if (agent.outputLines.length === 0) return;
+    historyInitRef.current = true;
+    const userMessages: string[] = [];
+    for (const line of agent.outputLines) {
+      if (line.startsWith("> ")) {
+        userMessages.push(line.slice(2).trim());
+      }
+    }
+    promptHistoryRef.current = userMessages.reverse();
+  }, [agent.outputLines]);
+
+  // Reset history when agent or session changes
+  useEffect(() => {
+    promptHistoryRef.current = [];
+    historyIndexRef.current = -1;
+    savedDraftRef.current = "";
+    historyInitRef.current = false;
+  }, [agent.agentId, agent.sessionKey]);
+
   useEffect(() => {
     setRenameEditing(false);
     setRenameSaving(false);
@@ -1172,6 +1198,9 @@ export const AgentChatPanel = ({
       if (!canSend || agent.status === "running") return;
       const trimmed = message.trim();
       if (!trimmed) return;
+      promptHistoryRef.current.unshift(trimmed);
+      historyIndexRef.current = -1;
+      savedDraftRef.current = "";
       plainDraftRef.current = "";
       setDraftValue("");
       onDraftChange("");
@@ -1246,12 +1275,49 @@ export const AgentChatPanel = ({
   const handleComposerKeyDown = useCallback(
     (event: KeyboardEvent<HTMLTextAreaElement>) => {
       if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+
+      const history = promptHistoryRef.current;
+      if (event.key === "ArrowUp" && history.length > 0) {
+        const el = event.currentTarget;
+        const beforeCursor = el.value.slice(0, el.selectionStart);
+        const isFirstLine = !beforeCursor.includes("\n");
+        if (isFirstLine) {
+          event.preventDefault();
+          if (historyIndexRef.current === -1) {
+            savedDraftRef.current = draftValue;
+          }
+          const next = Math.min(historyIndexRef.current + 1, history.length - 1);
+          historyIndexRef.current = next;
+          const restored = history[next];
+          plainDraftRef.current = restored;
+          setDraftValue(restored);
+          onDraftChange(restored);
+          return;
+        }
+      }
+
+      if (event.key === "ArrowDown" && historyIndexRef.current >= 0) {
+        const el = event.currentTarget;
+        const afterCursor = el.value.slice(el.selectionEnd);
+        const isLastLine = !afterCursor.includes("\n");
+        if (isLastLine) {
+          event.preventDefault();
+          const next = historyIndexRef.current - 1;
+          historyIndexRef.current = next;
+          const restored = next < 0 ? savedDraftRef.current : history[next];
+          plainDraftRef.current = restored;
+          setDraftValue(restored);
+          onDraftChange(restored);
+          return;
+        }
+      }
+
       if (event.key !== "Enter" || event.shiftKey) return;
       if (event.defaultPrevented) return;
       event.preventDefault();
       handleSend(draftValue);
     },
-    [draftValue, handleSend]
+    [draftValue, handleSend, onDraftChange]
   );
 
   const handleComposerSend = useCallback(() => {
