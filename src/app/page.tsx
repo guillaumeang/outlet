@@ -305,7 +305,7 @@ const AgentStudioPage = () => {
       return extractCanvasEntriesFromOutputLines(lines);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [focusedAgent?.outputLines]
+    [focusedAgent?.outputLines, focusedAgent?.transcriptRevision]
   );
   const activeCanvasEntry: CanvasEntry | null =
     canvasEntries.length > 0
