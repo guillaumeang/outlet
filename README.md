@@ -71,6 +71,20 @@ Copy `.env.example` to `.env.local` and adjust as needed:
 |----------|---------|-------------|
 | `NEXT_PUBLIC_GATEWAY_URL` | `ws://127.0.0.1:18789` | Your OpenClaw gateway WebSocket URL |
 
+## Remote Access (Cloudflare Tunnel)
+
+Access Outlet from anywhere by creating an encrypted tunnel to your local instance — no server, no domain, no configuration.
+
+In a **second terminal**, run:
+
+```bash
+npm run tunnel
+```
+
+This launches a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) that prints a public URL (e.g. `https://abc123.trycloudflare.com`). Open that URL from any device to use Outlet remotely. The URL changes each time you restart the tunnel.
+
+> **Security:** Set `STUDIO_ACCESS_TOKEN` in your `.env.local` to require a token for remote access. Without it, anyone with the URL can use your Outlet instance. Traffic is encrypted end-to-end via Cloudflare — your data is not inspected or stored.
+
 ## How It Works
 
 Outlet wraps each message with context that tells the agent about the canvas panel. The agent responds with standard chat text **plus** fenced `` ```canvas `` blocks containing JSON. These blocks are automatically extracted and rendered in the right pane.
