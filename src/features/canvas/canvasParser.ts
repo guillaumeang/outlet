@@ -17,7 +17,7 @@ function hashString(s: string): string {
   return hash.toString(36);
 }
 
-const CANVAS_FENCE_RE = /```canvas\s*\n([\s\S]*?)\n```/g;
+const CANVAS_FENCE_RE = /`{3,}canvas\s*\n([\s\S]*?)\n`{3,}/g;
 
 function extractCanvasBlocks(text: string): string[] {
   const results: string[] = [];
@@ -34,8 +34,12 @@ function parseCanvasPayload(json: string): CanvasPayload | null {
   try {
     const parsed: unknown = JSON.parse(json);
     const result = CanvasPayloadSchema.safeParse(parsed);
+    if (!result.success) {
+      console.warn("[canvas] Zod validation failed:", result.error.issues);
+    }
     return result.success ? result.data : null;
-  } catch {
+  } catch (err) {
+    console.warn("[canvas] JSON parse failed:", err);
     return null;
   }
 }
