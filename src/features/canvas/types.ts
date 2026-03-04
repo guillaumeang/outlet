@@ -39,8 +39,8 @@ const MetricWidgetSchema = z.object({
   id: z.string().optional(),
   label: z.string(),
   value: z.union([z.string(), z.number()]),
-  delta: z.string().optional(),
-  deltaPositive: z.boolean().optional(),
+  delta: z.string().nullable().optional(),
+  deltaPositive: z.boolean().nullable().optional(),
   prompt: z.string().optional(),
 });
 
