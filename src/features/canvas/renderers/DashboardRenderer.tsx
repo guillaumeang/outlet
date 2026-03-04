@@ -5,6 +5,7 @@ import {
   Area,
   BarChart,
   Bar,
+  ComposedChart,
   LineChart,
   Line,
   PieChart,
@@ -14,6 +15,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
   ResponsiveContainer,
 } from "recharts";
 import type { ChartWidget, DashboardBody, MetricWidget } from "../types";
@@ -209,6 +211,45 @@ const ChartCard = ({
             />
           </PieChart>
         );
+      case "combo": {
+        const lineKeys = chart.lineKeys ?? [];
+        return (
+          <ComposedChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+            <XAxis
+              dataKey={xKey}
+              tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+              stroke="var(--muted-foreground)"
+            />
+            <YAxis
+              tick={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+              stroke="var(--muted-foreground)"
+            />
+            <Tooltip
+              contentStyle={{
+                background: "var(--card)",
+                border: "1px solid var(--border)",
+                borderRadius: "6px",
+                fontSize: 11,
+              }}
+            />
+            <Legend
+              wrapperStyle={{ fontSize: 10, fontFamily: "var(--font-mono)" }}
+            />
+            <Bar dataKey={chart.dataKey} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} />
+            {lineKeys.map((key, i) => (
+              <Line
+                key={key}
+                type="monotone"
+                dataKey={key}
+                stroke={CHART_COLORS[(i + 1) % CHART_COLORS.length]}
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
+            ))}
+          </ComposedChart>
+        );
+      }
     }
   };
 

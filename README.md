@@ -75,7 +75,7 @@ No prompt engineering needed — Outlet injects the canvas protocol automaticall
 | Type | Use For |
 |------|---------|
 | **list** | Search results, file lists, tasks, logs |
-| **dashboard** | KPIs, metrics, charts (bar/line/area/pie) |
+| **dashboard** | KPIs, metrics, charts (bar/line/area/pie/combo) |
 | **kanban** | Sprint boards, workflow stages |
 | **spreadsheet** | Tabular data, comparisons, inventories |
 | **detail** | Entity details, key-value records |

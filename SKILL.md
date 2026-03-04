@@ -77,7 +77,12 @@ Use for: KPIs, analytics, system health.
 ```json
 { "type": "dashboard", "metrics": [{ "label": "Users", "value": 1284, "delta": "+12%", "deltaPositive": true }], "charts": [{ "type": "bar", "title": "Revenue", "dataKey": "rev", "xKey": "day", "data": [{ "day": "Mon", "rev": 4200 }] }] }
 ```
-Chart types: `"bar"` | `"line"` | `"area"` | `"pie"`. `dataKey` = Y axis field, `xKey` = X axis field.
+Chart types: `"bar"` | `"line"` | `"area"` | `"pie"` | `"combo"`. `dataKey` = Y axis field, `xKey` = X axis field.
+
+For `"combo"`: `dataKey` renders as bars, `lineKeys` renders as overlay lines. Example:
+```json
+{ "type": "combo", "title": "Revenue vs Target", "dataKey": "revenue", "lineKeys": ["target", "average"], "xKey": "month", "data": [{ "month": "Jan", "revenue": 5000, "target": 4500, "average": 4200 }] }
+```
 
 ### `kanban` — Column board
 Use for: project tracking, sprint boards, workflow stages.

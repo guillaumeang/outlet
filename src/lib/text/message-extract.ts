@@ -511,7 +511,8 @@ Render structured data as a canvas block (auto-extracted to the right panel):
 { "header": { "title": "..." }, "body": { "type": "<type>", ... } }
 \`\`\`
 
-Body types: list (items[]{title,subtitle,meta,badge,prompt}), dashboard (metrics[]{label,value,delta,deltaPositive}+charts[]{type:"bar"|"line"|"area"|"pie",dataKey,xKey,data}), kanban (columns[]{title,cards[]{title,subtitle,meta,prompt}}), detail (fields[]{label,value,prompt}), spreadsheet (columns[]{key,label?,align?:"left"|"center"|"right"}+rows[]{[key]:string|number|boolean|null}), markdown ({content}), image ({src,alt,caption}), webpage ({url,title}).
+Body types: list (items[]{title,subtitle,meta,badge,prompt}), dashboard (metrics[]{label,value,delta,deltaPositive}+charts[]{type:"bar"|"line"|"area"|"pie"|"combo",dataKey,lineKeys?,xKey,data}), kanban (columns[]{title,cards[]{title,subtitle,meta,prompt}}), detail (fields[]{label,value,prompt}), spreadsheet (columns[]{key,label?,align?:"left"|"center"|"right"}+rows[]{[key]:string|number|boolean|null}), markdown ({content}), image ({src,alt,caption}), webpage ({url,title}).
+For combo charts: dataKey is rendered as bars, lineKeys[] as overlay lines (e.g. dataKey:"revenue", lineKeys:["target","average"]).
 
 Add "prompt" to elements to make them clickable. Keep chat to 1-2 sentences; let the canvas carry the data.
 [/outlet]`;

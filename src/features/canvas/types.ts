@@ -48,9 +48,10 @@ const ChartDataPointSchema = z.record(z.union([z.string(), z.number()]));
 
 const ChartWidgetSchema = z.object({
   id: z.string().optional(),
-  type: z.enum(["bar", "line", "pie", "area"]),
+  type: z.enum(["bar", "line", "pie", "area", "combo"]),
   title: z.string().optional(),
   dataKey: z.string(),
+  lineKeys: z.array(z.string()).optional(),
   xKey: z.string().optional(),
   data: z.array(ChartDataPointSchema),
   prompt: z.string().optional(),
