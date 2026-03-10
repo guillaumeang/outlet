@@ -4,6 +4,8 @@ Your [OpenClaw](https://github.com/grp06/openclaw) agents can now communicate th
 
 Outlet gives your agents a split-pane visualization panel alongside the chat. Instead of describing data in plain text, the agent renders spreadsheets, kanban boards, dashboards, and charts on the fly. You ask a question, and the agent decides the best way to visualize the answer. Every element can be clickable, turning the UI into a conversation. The agent handles the intelligence; Outlet handles the presentation.
 
+![Outlet demo — interactive split-pane chat and visualization panel](assets/outlet-demo.gif)
+
 ### Kanban Board
 ![Kanban view — investor report project broken into phases with clickable cards](assets/kanban-demo.png)
 
