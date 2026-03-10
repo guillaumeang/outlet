@@ -20,6 +20,7 @@ type ItemMeta = {
 
 export type AgentChatItem =
   | { kind: "user"; text: string; timestampMs?: number }
+  | { kind: "user-media"; path: string; mime: string; filename: string }
   | { kind: "assistant"; text: string; live?: boolean; timestampMs?: number; thinkingDurationMs?: number; model?: string; inputTokens?: number; outputTokens?: number }
   | { kind: "tool"; text: string; timestampMs?: number }
   | { kind: "thinking"; text: string; live?: boolean; timestampMs?: number; thinkingDurationMs?: number };
@@ -30,6 +31,7 @@ export type AssistantTraceEvent =
 
 export type AgentChatRenderBlock =
   | { kind: "user"; text: string; timestampMs?: number }
+  | { kind: "user-media"; path: string; mime: string; filename: string }
   | {
       kind: "assistant";
       text: string | null;
@@ -127,6 +129,14 @@ export const buildFinalAgentChatItems = ({
       continue;
     }
     const trimmed = line.trim();
+    if (trimmed.startsWith(">ATTACHMENT:")) {
+      const payload = trimmed.slice(">ATTACHMENT:".length);
+      const parts = payload.split("|");
+      if (parts.length >= 3) {
+        items.push({ kind: "user-media", path: parts[0], mime: parts[1], filename: parts.slice(2).join("|") });
+      }
+      continue;
+    }
     if (trimmed.startsWith(">")) {
       const text = trimmed.replace(/^>\s?/, "").trim();
       if (text) {
@@ -257,6 +267,14 @@ export const buildAgentChatItems = ({
       continue;
     }
     const trimmed = line.trim();
+    if (trimmed.startsWith(">ATTACHMENT:")) {
+      const payload = trimmed.slice(">ATTACHMENT:".length);
+      const parts = payload.split("|");
+      if (parts.length >= 3) {
+        items.push({ kind: "user-media", path: parts[0], mime: parts[1], filename: parts.slice(2).join("|") });
+      }
+      continue;
+    }
     if (trimmed.startsWith(">")) {
       const text = trimmed.replace(/^>\s?/, "").trim();
       if (text) {
@@ -413,6 +431,12 @@ export const buildAgentChatRenderBlocks = (
     if (item.kind === "user") {
       flushAssistant();
       blocks.push({ kind: "user", text: item.text, timestampMs: item.timestampMs });
+      continue;
+    }
+
+    if (item.kind === "user-media") {
+      flushAssistant();
+      blocks.push({ kind: "user-media", path: item.path, mime: item.mime, filename: item.filename });
       continue;
     }
 

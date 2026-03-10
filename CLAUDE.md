@@ -56,6 +56,11 @@ src/
       renderers/              # ListRenderer, DashboardRenderer, KanbanRenderer,
                               # SpreadsheetRenderer, DetailRenderer, MarkdownRenderer,
                               # ImageRenderer, WebpageRenderer, FallbackRenderer
+      tools/                  # Interactive tool mini-apps (ToolHost + registry)
+        registry.ts           # Tool registry — registerTool(), getTool()
+        types.ts              # ToolComponentProps, ToolRegistryEntry
+        ToolHost.tsx           # Stateful wrapper (reducer: AGENT_REPLACE/MERGE/LOCAL_EDIT)
+        twitter-post/          # Twitter/X post & thread previewer/editor
   lib/
     gateway/                  # WebSocket client wrapper
     text/message-extract.ts   # Message parsing + OUTLET_CONTEXT injection
@@ -83,5 +88,20 @@ npm test           # Vitest unit tests
 | `markdown` | Full markdown content |
 | `image` | Image with optional caption |
 | `webpage` | Sandboxed iframe |
+| `tool` | Interactive tool mini-app (stateful, editable) |
 
 Any canvas element with a `prompt` field sends that prompt as a chat message when clicked.
+
+## Tools System
+
+Tools are interactive, stateful mini-apps rendered in the outlet panel. Unlike standard canvas body types (which are stateless), tools support:
+- **Incremental agent updates** (`"update": true` deep-merges data)
+- **Local user editing** (edits stored as local overrides, survive incremental updates)
+
+### Adding a new tool
+
+1. Create `src/features/canvas/tools/<tool-id>/schema.ts` — Zod data schema
+2. Create `src/features/canvas/tools/<tool-id>/<ToolName>Tool.tsx` — React component implementing `ToolComponentProps<T>`
+3. Create `src/features/canvas/tools/<tool-id>/index.ts` — calls `registerTool()` with lazy-loaded component
+4. Add `import("./<tool-id>")` to `tools/registry.ts`
+5. Add the tool description to `OUTLET_CONTEXT` in `message-extract.ts`

@@ -30,8 +30,15 @@ const TOOL_CALL_PREFIX = "[[tool]]";
 const TOOL_RESULT_PREFIX = "[[tool-result]]";
 const META_PREFIX = "[[meta]]";
 
+export type AttachmentRef = {
+  path: string;
+  mime: string;
+  filename: string;
+};
+
 export type AgentInstructionParams = {
   message: string;
+  attachments?: AttachmentRef[];
 };
 
 const EXEC_APPROVAL_WAIT_POLICY = [
@@ -543,9 +550,26 @@ Choose the body type that best fits the data — do NOT default to markdown when
 - **markdown**: reports, documentation, long-form content → {content}
 - **image**: images → {src,alt,caption}
 - **webpage**: embedded pages → {url,title}
+- **tool**: interactive tools/mini-apps → {tool:"<tool-id>", data:{...}, update?:boolean}
 
 For combo charts: dataKey is rendered as bars, lineKeys[] as overlay lines (e.g. dataKey:"revenue", lineKeys:["target","average"]).
 Add "prompt" to elements to make them clickable. Keep chat to 1-2 sentences; let the canvas carry the data.
+
+## Tools
+Load interactive tool mini-apps in the outlet panel using type "tool":
+\`\`\`canvas
+{ "header": { "title": "..." }, "body": { "type": "tool", "tool": "<tool-id>", "data": { ... } } }
+\`\`\`
+
+Available tools:
+- **twitter-post**: Twitter/X post & thread previewer. Data: { author: { name, handle, avatar? }, posts: [{ text, image?, likes?, retweets?, replies?, timestamp? }] }. The user can edit text and images directly.
+
+### Incremental updates
+To update an existing tool without replacing all its data, add "update": true:
+\`\`\`canvas
+{ "header": { "title": "..." }, "body": { "type": "tool", "tool": "twitter-post", "data": { "posts": [{ "text": "Updated" }] }, "update": true } }
+\`\`\`
+With "update": true, data is deep-merged into the tool's current state — only specified fields change. Omit "update" to replace entirely. Use incremental updates for small changes; use full replace for new content.
 
 ## Markdown
 The UI renders standard markdown + GFM everywhere. Use rich markdown freely in chat messages (**bold**, *italic*, headings, lists, tables, \`code\`, fenced code blocks). All text fields inside every canvas body type (titles, subtitles, values, content, labels) also support inline markdown, so you can bold, italicize, or add code spans within any layout — not just the markdown type.
@@ -553,9 +577,17 @@ The UI renders standard markdown + GFM everywhere. Use rich markdown freely in c
 
 export const buildAgentInstruction = ({
   message,
+  attachments,
 }: AgentInstructionParams): string => {
   const trimmed = message.trim();
-  return `${OUTLET_CONTEXT}\n\n${trimmed}`;
+  const text = `${OUTLET_CONTEXT}\n\n${trimmed}`;
+
+  if (!attachments?.length) return text;
+
+  const lines = attachments.map(
+    (att) => `[Attached file: ${att.filename} (${att.mime}) at ${att.path}]`,
+  );
+  return `${text}\n\n${lines.join("\n")}`;
 };
 
 const PROJECT_PROMPT_BLOCK_RE = /^(?:Project|Workspace) path:[\s\S]*?\n\s*\n/i;

@@ -137,6 +137,15 @@ const MarkdownBodySchema = z.object({
   content: z.string(),
 });
 
+// ─── Body: tool ─────────────────────────────────────────────────────────────
+
+const ToolBodySchema = z.object({
+  type: z.literal("tool"),
+  tool: z.string(),
+  data: z.record(z.unknown()),
+  update: z.boolean().optional(),
+});
+
 // ─── Union ───────────────────────────────────────────────────────────────────
 
 const CanvasBodySchema = z.discriminatedUnion("type", [
@@ -148,6 +157,7 @@ const CanvasBodySchema = z.discriminatedUnion("type", [
   DetailBodySchema,
   SpreadsheetBodySchema,
   MarkdownBodySchema,
+  ToolBodySchema,
 ]);
 
 // ─── Full payload ─────────────────────────────────────────────────────────────
@@ -187,6 +197,8 @@ export type SpreadsheetColumn = z.infer<typeof SpreadsheetColumnSchema>;
 export type SpreadsheetRow = z.infer<typeof SpreadsheetRowSchema>;
 
 export type MarkdownBody = z.infer<typeof MarkdownBodySchema>;
+
+export type ToolBody = z.infer<typeof ToolBodySchema>;
 
 export type CanvasEntry = {
   id: string;

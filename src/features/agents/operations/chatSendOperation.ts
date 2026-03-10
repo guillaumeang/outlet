@@ -3,6 +3,7 @@ import {
   buildAgentInstruction,
   isMetaMarkdown,
   parseMetaMarkdown,
+  type AttachmentRef,
 } from "@/lib/text/message-extract";
 import type { AgentState } from "@/features/agents/state/store";
 import { randomUUID } from "@/lib/uuid";
@@ -63,6 +64,7 @@ export async function sendChatMessageViaStudio(params: {
   agentId: string;
   sessionKey: string;
   message: string;
+  attachments?: AttachmentRef[];
   clearRunTracking?: (runId: string) => void;
   echoUserMessage?: boolean;
   now?: () => number;
@@ -142,6 +144,15 @@ export async function sendChatMessageViaStudio(params: {
         kind: "user",
       },
     });
+    if (params.attachments?.length) {
+      for (const att of params.attachments) {
+        params.dispatch({
+          type: "appendOutput",
+          agentId,
+          line: `>ATTACHMENT:${att.path}|${att.mime}|${att.filename}`,
+        });
+      }
+    }
   }
 
   try {
@@ -170,7 +181,7 @@ export async function sendChatMessageViaStudio(params: {
 
     const sendResult = await params.client.call("chat.send", {
       sessionKey: params.sessionKey,
-      message: buildAgentInstruction({ message: trimmed }),
+      message: buildAgentInstruction({ message: trimmed, attachments: params.attachments }),
       deliver: false,
       idempotencyKey: runId,
     });

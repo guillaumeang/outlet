@@ -1,0 +1,25 @@
+import { z } from "zod";
+
+const TwitterAuthorSchema = z.object({
+  name: z.string(),
+  handle: z.string(),
+  avatar: z.string().optional(),
+});
+
+const TwitterPostSchema = z.object({
+  text: z.string(),
+  image: z.string().optional(),
+  likes: z.number().optional(),
+  retweets: z.number().optional(),
+  replies: z.number().optional(),
+  timestamp: z.string().optional(),
+});
+
+export const TwitterPostToolDataSchema = z.object({
+  author: TwitterAuthorSchema,
+  posts: z.array(TwitterPostSchema).min(1),
+});
+
+export type TwitterPostToolData = z.infer<typeof TwitterPostToolDataSchema>;
+export type TwitterAuthor = z.infer<typeof TwitterAuthorSchema>;
+export type TwitterPost = z.infer<typeof TwitterPostSchema>;

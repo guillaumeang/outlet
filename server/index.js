@@ -1,4 +1,7 @@
+const fs = require("node:fs");
 const http = require("node:http");
+const os = require("node:os");
+const path = require("node:path");
 const next = require("next");
 
 const { createAccessGate } = require("./access-gate");
@@ -19,7 +22,31 @@ const resolvePathname = (url) => {
   return (idx === -1 ? raw : raw.slice(0, idx)) || "/";
 };
 
+/** Remove uploaded files older than 7 days from ~/.openclaw/uploads */
+function cleanOldUploads() {
+  const dir = path.join(os.homedir(), ".openclaw", "uploads");
+  let entries;
+  try {
+    entries = fs.readdirSync(dir);
+  } catch {
+    return; // directory doesn't exist yet
+  }
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  for (const name of entries) {
+    const filepath = path.join(dir, name);
+    try {
+      const stat = fs.statSync(filepath);
+      if (stat.isFile() && stat.mtimeMs < cutoff) {
+        fs.unlinkSync(filepath);
+      }
+    } catch {
+      // ignore individual file errors
+    }
+  }
+}
+
 async function main() {
+  cleanOldUploads();
   const dev = process.argv.includes("--dev");
   const hostnames = Array.from(new Set(resolveHosts(process.env)));
   const hostname = hostnames[0] ?? "127.0.0.1";

@@ -560,6 +560,6 @@ describe("AgentChatPanel controls", () => {
     expect(onSend).not.toHaveBeenCalled();
 
     fireEvent.keyDown(textarea, { key: "Enter", code: "Enter" });
-    expect(onSend).toHaveBeenCalledWith("draft text");
+    expect(onSend).toHaveBeenCalledWith("draft text", undefined);
   });
 });

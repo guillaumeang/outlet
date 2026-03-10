@@ -175,7 +175,7 @@ describe("buildFinalAgentChatItems", () => {
 
     expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({ kind: "assistant" });
-    expect(items[0]?.text).toContain("- first item");
+    expect(items[0]?.kind === "assistant" && items[0].text).toContain("- first item");
   });
 
   it("classifies tool markdown as tool items when tool calling is enabled", () => {

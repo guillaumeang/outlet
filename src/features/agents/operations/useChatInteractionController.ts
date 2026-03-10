@@ -8,6 +8,7 @@ import {
   planStopRunIntent,
 } from "@/features/agents/operations/chatInteractionWorkflow";
 import { sendChatMessageViaStudio } from "@/features/agents/operations/chatSendOperation";
+import type { AttachmentRef } from "@/lib/text/message-extract";
 import { mergePendingLivePatch } from "@/features/agents/state/livePatchQueue";
 import { buildNewSessionAgentPatch, type AgentState } from "@/features/agents/state/store";
 import type { GatewayStatus } from "@/lib/gateway/GatewayClient";
@@ -39,7 +40,7 @@ export type ChatInteractionController = {
   stopBusyAgentId: string | null;
   flushPendingDraft: (agentId: string | null) => void;
   handleDraftChange: (agentId: string, value: string) => void;
-  handleSend: (agentId: string, sessionKey: string, message: string) => Promise<void>;
+  handleSend: (agentId: string, sessionKey: string, message: string, attachments?: AttachmentRef[]) => Promise<void>;
   handleNewSession: (agentId: string) => Promise<void>;
   handleStopRun: (agentId: string, sessionKey: string) => Promise<void>;
   queueLivePatch: (agentId: string, patch: Partial<AgentState>) => void;
@@ -180,9 +181,9 @@ export function useChatInteractionController(
   );
 
   const handleSend = useCallback(
-    async (agentId: string, sessionKey: string, message: string) => {
+    async (agentId: string, sessionKey: string, message: string, attachments?: AttachmentRef[]) => {
       const trimmed = message.trim();
-      if (!trimmed) return;
+      if (!trimmed && !attachments?.length) return;
       const pendingDraftTimer = pendingDraftTimersRef.current.get(agentId) ?? null;
       if (pendingDraftTimer !== null) {
         window.clearTimeout(pendingDraftTimer);
@@ -197,7 +198,8 @@ export function useChatInteractionController(
           params.getAgents().find((entry) => entry.agentId === currentAgentId) ?? null,
         agentId,
         sessionKey,
-        message: trimmed,
+        message: trimmed || "(attached file)",
+        attachments,
         clearRunTracking: (runId) => params.clearRunTracking(runId),
       });
     },

@@ -1771,8 +1771,8 @@ const AgentStudioPage = () => {
                             handleThinkingTracesToggle(focusedAgent.agentId, enabled)
                           }
                           onDraftChange={(value) => handleDraftChange(focusedAgent.agentId, value)}
-                          onSend={(message) =>
-                            handleSend(focusedAgent.agentId, focusedAgent.sessionKey, message)
+                          onSend={(message, attachments) =>
+                            handleSend(focusedAgent.agentId, focusedAgent.sessionKey, message, attachments)
                           }
                           onStopRun={() =>
                             handleStopRun(focusedAgent.agentId, focusedAgent.sessionKey)

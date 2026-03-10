@@ -6,14 +6,16 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type DragEvent,
   type KeyboardEvent,
   type MutableRefObject,
   type ReactNode,
 } from "react";
+import type { AttachmentRef } from "@/lib/text/message-extract";
 import type { AgentState as AgentRecord } from "@/features/agents/state/store";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Check, ChevronRight, Clock, Cog, Pencil, Plus, RefreshCw, Shuffle, Square, X } from "lucide-react";
+import { ArrowUp, Check, ChevronRight, Clock, Cog, FileText, Paperclip, Pencil, Plus, RefreshCw, Shuffle, Square, X } from "lucide-react";
 import type { GatewayModelChoice } from "@/lib/gateway/models";
 import { rewriteMediaLinesToMarkdown } from "@/lib/text/media-markdown";
 import { normalizeAssistantDisplayText } from "@/lib/text/assistantText";
@@ -162,7 +164,7 @@ type AgentChatPanelProps = {
   onToolCallingToggle?: (enabled: boolean) => void;
   onThinkingTracesToggle?: (enabled: boolean) => void;
   onDraftChange: (value: string) => void;
-  onSend: (message: string) => void;
+  onSend: (message: string, attachments?: AttachmentRef[]) => void;
   onStopRun: () => void;
   onAvatarShuffle: () => void;
   pendingExecApprovals?: PendingExecApproval[];
@@ -387,6 +389,42 @@ const UserMessageCard = memo(function UserMessageCard({
       <div className="agent-markdown type-body px-3 py-3 text-foreground dark:px-3.5 dark:py-3.5">
         <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
       </div>
+    </div>
+  );
+});
+
+const UserMediaCard = memo(function UserMediaCard({
+  path,
+  mime,
+  filename,
+}: {
+  path: string;
+  mime: string;
+  filename: string;
+}) {
+  const isImage = mime.startsWith("image/");
+  const mediaUrl = `/api/gateway/media?path=${encodeURIComponent(path)}`;
+  return (
+    <div className="flex w-full max-w-[70ch] justify-end self-end">
+      {isImage ? (
+        <a href={mediaUrl} target="_blank" rel="noopener noreferrer" className="block">
+          <img
+            src={mediaUrl}
+            alt={filename}
+            className="max-h-[280px] rounded-[var(--radius-small)] border border-border/40 object-contain"
+          />
+        </a>
+      ) : (
+        <a
+          href={mediaUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-[var(--radius-small)] border border-border/40 bg-[color:var(--chat-user-bg)] px-3 py-2 text-sm text-foreground transition hover:bg-[color:var(--chat-user-header-bg)]"
+        >
+          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="truncate">{filename}</span>
+        </a>
+      )}
     </div>
   );
 });
@@ -625,6 +663,16 @@ const AgentChatFinalItems = memo(function AgentChatFinalItems({
             />
           );
         }
+        if (block.kind === "user-media") {
+          return (
+            <UserMediaCard
+              key={`chat-${agentId}-media-${index}`}
+              path={block.path}
+              mime={block.mime}
+              filename={block.filename}
+            />
+          );
+        }
         const streaming = running && index === blocks.length - 1 && !block.text;
         return (
           <AssistantMessageCard
@@ -813,7 +861,7 @@ const AgentChatTranscript = memo(function AgentChatTranscript({
         }}
       >
         <div className="relative flex flex-col gap-6 dark:gap-8 text-[14px] leading-[1.65] text-foreground">
-          <div aria-hidden className={`pointer-events-none absolute ${SPINE_LEFT} top-0 bottom-0 w-px bg-border/20`} />
+          <div aria-hidden className={`pointer-events-none absolute -z-10 ${SPINE_LEFT} top-0 bottom-0 w-px bg-border/40`} />
           {historyMaybeTruncated && isAtTop ? (
             <div className="-mx-1 flex items-center justify-between gap-3 rounded-md bg-surface-2 px-3 py-2 shadow-2xs">
               <div className="type-meta min-w-0 truncate font-mono text-muted-foreground">
@@ -915,6 +963,23 @@ const InlineHoverTooltip = ({
   );
 };
 
+// ─── Attachment upload helper ─────────────────────────────────────────────────
+
+type PendingAttachment = AttachmentRef & { previewUrl?: string };
+
+const ALLOWED_UPLOAD_TYPES = new Set([
+  "image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf",
+]);
+
+async function uploadFile(file: File): Promise<AttachmentRef> {
+  const form = new FormData();
+  form.append("file", file);
+  const res = await fetch("/api/gateway/upload", { method: "POST", body: form });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.error ?? "Upload failed");
+  return { path: json.path, mime: json.mime, filename: json.filename };
+}
+
 const AgentChatComposer = memo(function AgentChatComposer({
   value,
   onChange,
@@ -927,6 +992,9 @@ const AgentChatComposer = memo(function AgentChatComposer({
   running,
   sendDisabled,
   inputRef,
+  attachments,
+  onAddFiles,
+  onRemoveAttachment,
   modelOptions,
   modelValue,
   allowThinking,
@@ -949,6 +1017,9 @@ const AgentChatComposer = memo(function AgentChatComposer({
   running: boolean;
   sendDisabled: boolean;
   inputRef: (el: HTMLTextAreaElement | HTMLInputElement | null) => void;
+  attachments: PendingAttachment[];
+  onAddFiles: (files: File[]) => void;
+  onRemoveAttachment: (index: number) => void;
   modelOptions: { value: string; label: string }[];
   modelValue: string;
   allowThinking: boolean;
@@ -960,6 +1031,40 @@ const AgentChatComposer = memo(function AgentChatComposer({
   onToolCallingToggle: (enabled: boolean) => void;
   onThinkingTracesToggle: (enabled: boolean) => void;
 }) {
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handlePaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      const files = Array.from(e.clipboardData.files).filter((f) => ALLOWED_UPLOAD_TYPES.has(f.type));
+      if (files.length > 0) {
+        e.preventDefault();
+        onAddFiles(files);
+      }
+    },
+    [onAddFiles],
+  );
+
+  const handleDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: DragEvent) => {
+      e.preventDefault();
+      setDragOver(false);
+      const files = Array.from(e.dataTransfer.files).filter((f) => ALLOWED_UPLOAD_TYPES.has(f.type));
+      if (files.length > 0) onAddFiles(files);
+    },
+    [onAddFiles],
+  );
+
   const stopReason = stopDisabledReason?.trim() ?? "";
   const stopDisabled = !canSend || stopBusy || Boolean(stopReason);
   const stopAriaLabel = stopReason ? `Stop unavailable: ${stopReason}` : "Stop";
@@ -988,8 +1093,63 @@ const AgentChatComposer = memo(function AgentChatComposer({
   }, [thinkingValue]);
   const thinkingSelectWidthCh = Math.max(9, Math.min(22, thinkingSelectedLabel.length + 6));
   return (
-    <div className="rounded-2xl border border-border/65 bg-surface-2/45 px-3 py-2">
+    <div
+      className={`rounded-2xl border bg-surface-2/45 px-3 py-2 transition ${dragOver ? "border-primary/60 ring-1 ring-primary/30" : "border-border/65"}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Attachment previews */}
+      {attachments.length > 0 ? (
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {attachments.map((att, i) => (
+            <div
+              key={att.filename}
+              className="group/att relative flex items-center gap-1.5 rounded-md border border-border/50 bg-surface-3 px-2 py-1"
+            >
+              {att.previewUrl ? (
+                <img src={att.previewUrl} alt="" className="h-8 w-8 rounded object-cover" />
+              ) : (
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              )}
+              <span className="max-w-[120px] truncate font-mono text-[10px] text-muted-foreground">
+                {att.filename}
+              </span>
+              <button
+                type="button"
+                className="ml-0.5 rounded-full p-0.5 text-muted-foreground/50 transition hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => onRemoveAttachment(i)}
+                aria-label="Remove attachment"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
       <div className="flex items-end gap-2">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/gif,image/webp,application/pdf"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            const files = Array.from(e.target.files ?? []).filter((f) => ALLOWED_UPLOAD_TYPES.has(f.type));
+            if (files.length > 0) onAddFiles(files);
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 transition hover:text-foreground"
+          onClick={() => fileInputRef.current?.click()}
+          aria-label="Attach file"
+          title="Attach image or PDF"
+        >
+          <Paperclip className="h-4 w-4" />
+        </button>
         <textarea
           ref={inputRef}
           rows={2}
@@ -997,6 +1157,7 @@ const AgentChatComposer = memo(function AgentChatComposer({
           className="chat-composer-input min-h-[48px] flex-1 resize-none border-0 bg-transparent px-0 py-1 text-[15px] leading-6 text-foreground outline-none shadow-none transition placeholder:text-muted-foreground/65 focus:outline-none focus-visible:outline-none focus-visible:ring-0"
           onChange={onChange}
           onKeyDown={onKeyDown}
+          onPaste={handlePaste}
           placeholder="type a message"
         />
         {running ? (
@@ -1137,6 +1298,7 @@ export const AgentChatPanel = ({
   const [renameSaving, setRenameSaving] = useState(false);
   const [renameDraft, setRenameDraft] = useState(agent.name);
   const [renameError, setRenameError] = useState<string | null>(null);
+  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
   const draftRef = useRef<HTMLTextAreaElement | null>(null);
   const renameInputRef = useRef<HTMLInputElement | null>(null);
   const renameEditorRef = useRef<HTMLDivElement | null>(null);
@@ -1236,21 +1398,70 @@ export const AgentChatPanel = ({
     };
   }, [resizeDraft, draftValue]);
 
+  const handleAddFiles = useCallback(
+    (files: File[]) => {
+      for (const file of files) {
+        const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
+        const placeholder: PendingAttachment = {
+          path: "",
+          mime: file.type,
+          filename: file.name,
+          previewUrl,
+        };
+        setPendingAttachments((prev) => [...prev, placeholder]);
+        uploadFile(file)
+          .then((ref) => {
+            setPendingAttachments((prev) =>
+              prev.map((att) =>
+                att.filename === placeholder.filename && att.path === ""
+                  ? { ...att, ...ref }
+                  : att,
+              ),
+            );
+          })
+          .catch(() => {
+            // Remove failed upload
+            setPendingAttachments((prev) =>
+              prev.filter(
+                (att) => !(att.filename === placeholder.filename && att.path === ""),
+              ),
+            );
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+          });
+      }
+    },
+    [],
+  );
+
+  const handleRemoveAttachment = useCallback((index: number) => {
+    setPendingAttachments((prev) => {
+      const att = prev[index];
+      if (att?.previewUrl) URL.revokeObjectURL(att.previewUrl);
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
+
   const handleSend = useCallback(
     (message: string) => {
       if (!canSend || agent.status === "running") return;
       const trimmed = message.trim();
-      if (!trimmed) return;
-      promptHistoryRef.current.unshift(trimmed);
+      const atts = pendingAttachments.filter((a) => a.path);
+      if (!trimmed && atts.length === 0) return;
+      if (trimmed) promptHistoryRef.current.unshift(trimmed);
       historyIndexRef.current = -1;
       savedDraftRef.current = "";
       plainDraftRef.current = "";
       setDraftValue("");
       onDraftChange("");
+      // Revoke preview URLs and clear attachments
+      for (const att of pendingAttachments) {
+        if (att.previewUrl) URL.revokeObjectURL(att.previewUrl);
+      }
+      setPendingAttachments([]);
       scrollToBottomNextOutputRef.current = true;
-      onSend(trimmed);
+      onSend(trimmed || "(attached file)", atts.length > 0 ? atts : undefined);
     },
-    [agent.status, canSend, onDraftChange, onSend]
+    [agent.status, canSend, onDraftChange, onSend, pendingAttachments]
   );
 
   const chatItems = useMemo(
@@ -1264,8 +1475,9 @@ export const AgentChatPanel = ({
   );
   const running = agent.status === "running";
   const renderBlocks = useMemo(() => buildAgentChatRenderBlocks(chatItems), [chatItems]);
+  const lastRenderBlock = renderBlocks.length > 0 ? renderBlocks[renderBlocks.length - 1] : null;
   const hasActiveStreamingTailInTranscript =
-    running && renderBlocks.length > 0 && !renderBlocks[renderBlocks.length - 1].text;
+    running && lastRenderBlock !== null && lastRenderBlock.kind === "assistant" && !lastRenderBlock.text;
   const liveAssistantText =
     running && agent.streamText ? normalizeAssistantDisplayText(agent.streamText) : "";
   const liveThinkingText =
@@ -1303,7 +1515,8 @@ export const AgentChatPanel = ({
     () => resolveEmptyChatIntroMessage(agent.agentId, agent.sessionEpoch),
     [agent.agentId, agent.sessionEpoch]
   );
-  const sendDisabled = !canSend || running || !draftValue.trim();
+  const hasReadyAttachments = pendingAttachments.some((a) => a.path);
+  const sendDisabled = !canSend || running || (!draftValue.trim() && !hasReadyAttachments);
 
   const handleComposerChange = useCallback(
     (event: ChangeEvent<HTMLTextAreaElement>) => {
@@ -1591,6 +1804,9 @@ export const AgentChatPanel = ({
             stopDisabledReason={stopDisabledReason}
             running={running}
             sendDisabled={sendDisabled}
+            attachments={pendingAttachments}
+            onAddFiles={handleAddFiles}
+            onRemoveAttachment={handleRemoveAttachment}
             modelOptions={modelOptionsWithFallback.map((option) => ({
               value: option.value,
               label: option.label,

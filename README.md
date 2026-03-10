@@ -101,6 +101,12 @@ Both chat messages and outlet panel content support full **GitHub Flavored Markd
 
 Each assistant message shows the model used and token counts (input/output) in small text at the bottom of the message card, when available from the gateway. This gives you visibility into cost and model routing without leaving the conversation.
 
+### File Attachments
+
+You can attach images and PDFs to your messages via paste, drag-and-drop, or the paperclip button. Attached files are uploaded to `~/.openclaw/uploads/` and displayed as separate visual cards in the chat — images render inline as thumbnails, PDFs show as file links. The agent receives file references in the message text so it knows what you sent. Uploads are automatically cleaned up after 7 days.
+
+Supported formats: PNG, JPEG, GIF, WebP, PDF (25 MB per file, 100 MB total folder quota).
+
 ### Outlet Panel Types
 
 | Type | Use For |

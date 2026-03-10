@@ -33,6 +33,9 @@ const MarkdownRenderer = lazy(() =>
 const FallbackRenderer = lazy(() =>
   import("./renderers/FallbackRenderer").then((m) => ({ default: m.FallbackRenderer }))
 );
+const ToolHost = lazy(() =>
+  import("./tools/ToolHost").then((m) => ({ default: m.ToolHost }))
+);
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 
@@ -176,6 +179,8 @@ export const CanvasPane = ({
               <SpreadsheetRenderer body={body} />
             ) : body?.type === "markdown" ? (
               <MarkdownRenderer body={body} />
+            ) : body?.type === "tool" ? (
+              <ToolHost key={`tool-${body.tool}`} body={body} onSendPrompt={onSendPrompt} />
             ) : (
               <FallbackRenderer payload={entry.payload} />
             )}
