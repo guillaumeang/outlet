@@ -17,7 +17,10 @@ function hashString(s: string): string {
   return hash.toString(36);
 }
 
-const CANVAS_FENCE_RE = /`{3,}canvas\s*\n([\s\S]*?)\n`{3,}/g;
+// Accept both multi-line and single-line canvas fenced blocks:
+//   ```canvas\n{...}\n```   (standard)
+//   ```canvas {...} ```     (inline / agent formatting quirk)
+const CANVAS_FENCE_RE = /`{3,}canvas\s*\n?([\s\S]*?)\n?\s*`{3,}/g;
 
 function extractCanvasBlocks(text: string): string[] {
   const results: string[] = [];
@@ -53,6 +56,15 @@ function parseCanvasPayload(json: string): CanvasPayload | null {
 export function hasCanvasBlock(text: string): boolean {
   CANVAS_FENCE_RE.lastIndex = 0;
   return CANVAS_FENCE_RE.test(text);
+}
+
+/**
+ * Strips all ```canvas fenced blocks from text, returning what remains.
+ * Used to hide canvas blocks from the chat transcript display.
+ */
+export function stripCanvasBlocks(text: string): string {
+  CANVAS_FENCE_RE.lastIndex = 0;
+  return text.replace(CANVAS_FENCE_RE, "").trim();
 }
 
 /**

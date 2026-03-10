@@ -32,7 +32,7 @@ import {
   type AssistantTraceEvent,
   type AgentChatItem,
 } from "./chatItems";
-import { hasCanvasBlock } from "@/features/canvas/canvasParser";
+import { hasCanvasBlock, stripCanvasBlocks } from "@/features/canvas/canvasParser";
 
 // Hide ```canvas fenced blocks from chat — they are rendered in CanvasPane instead.
 // The pre override swallows the entire <pre><code class="language-canvas">...</code></pre> subtree.
@@ -537,18 +537,20 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
               <div className="ui-chat-assistant-card relative pb-[1.2rem]">
                 {streaming ? (
                   (() => {
-                    if (!contentText.includes("MEDIA:")) {
+                    const displayText = stripCanvasBlocks(contentText);
+                    if (!displayText) return null;
+                    if (!displayText.includes("MEDIA:")) {
                       return (
                         <div className="whitespace-pre-wrap break-words text-foreground">
-                          {contentText}
+                          {displayText}
                         </div>
                       );
                     }
-                    const rewritten = rewriteMediaLinesToMarkdown(contentText);
+                    const rewritten = rewriteMediaLinesToMarkdown(displayText);
                     if (!rewritten.includes("![](")) {
                       return (
                         <div className="whitespace-pre-wrap break-words text-foreground">
-                          {contentText}
+                          {displayText}
                         </div>
                       );
                     }
@@ -559,11 +561,17 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
                     );
                   })()
                 ) : (
-                  <div className="agent-markdown text-foreground">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={CANVAS_MARKDOWN_COMPONENTS}>
-                      {rewriteMediaLinesToMarkdown(contentText)}
-                    </ReactMarkdown>
-                  </div>
+                  (() => {
+                    const displayText = stripCanvasBlocks(contentText);
+                    if (!displayText) return null;
+                    return (
+                      <div className="agent-markdown text-foreground">
+                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={CANVAS_MARKDOWN_COMPONENTS}>
+                          {rewriteMediaLinesToMarkdown(displayText)}
+                        </ReactMarkdown>
+                      </div>
+                    );
+                  })()
                 )}
                 <div>
                   {!streaming && hasCanvasBlock(contentText) ? (
@@ -965,18 +973,27 @@ const InlineHoverTooltip = ({
 
 // ─── Attachment upload helper ─────────────────────────────────────────────────
 
-type PendingAttachment = AttachmentRef & { previewUrl?: string };
+type PendingAttachment = AttachmentRef & { id: string; previewUrl?: string; displayName: string };
 
 const ALLOWED_UPLOAD_TYPES = new Set([
   "image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf",
 ]);
 
+let attachmentCounter = 0;
+function nextAttachmentId(): string {
+  return `att-${Date.now()}-${++attachmentCounter}`;
+}
+
 async function uploadFile(file: File): Promise<AttachmentRef> {
   const form = new FormData();
   form.append("file", file);
   const res = await fetch("/api/gateway/upload", { method: "POST", body: form });
+  if (!res.ok) {
+    let message = "Upload failed";
+    try { const json = await res.json(); message = json.error ?? message; } catch { /* non-JSON response */ }
+    throw new Error(message);
+  }
   const json = await res.json();
-  if (!res.ok) throw new Error(json.error ?? "Upload failed");
   return { path: json.path, mime: json.mime, filename: json.filename };
 }
 
@@ -1104,16 +1121,18 @@ const AgentChatComposer = memo(function AgentChatComposer({
         <div className="mb-2 flex flex-wrap gap-1.5">
           {attachments.map((att, i) => (
             <div
-              key={att.filename}
+              key={att.id}
               className="group/att relative flex items-center gap-1.5 rounded-md border border-border/50 bg-surface-3 px-2 py-1"
             >
               {att.previewUrl ? (
                 <img src={att.previewUrl} alt="" className="h-8 w-8 rounded object-cover" />
-              ) : (
+              ) : att.path ? (
                 <FileText className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground" />
               )}
               <span className="max-w-[120px] truncate font-mono text-[10px] text-muted-foreground">
-                {att.filename}
+                {att.displayName}
               </span>
               <button
                 type="button"
@@ -1401,11 +1420,14 @@ export const AgentChatPanel = ({
   const handleAddFiles = useCallback(
     (files: File[]) => {
       for (const file of files) {
+        const id = nextAttachmentId();
         const previewUrl = file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined;
         const placeholder: PendingAttachment = {
+          id,
           path: "",
           mime: file.type,
           filename: file.name,
+          displayName: file.name,
           previewUrl,
         };
         setPendingAttachments((prev) => [...prev, placeholder]);
@@ -1413,19 +1435,15 @@ export const AgentChatPanel = ({
           .then((ref) => {
             setPendingAttachments((prev) =>
               prev.map((att) =>
-                att.filename === placeholder.filename && att.path === ""
-                  ? { ...att, ...ref }
+                att.id === id
+                  ? { ...att, path: ref.path, mime: ref.mime, filename: ref.filename }
                   : att,
               ),
             );
           })
-          .catch(() => {
-            // Remove failed upload
-            setPendingAttachments((prev) =>
-              prev.filter(
-                (att) => !(att.filename === placeholder.filename && att.path === ""),
-              ),
-            );
+          .catch((err) => {
+            console.error("[attachment] upload failed:", err);
+            setPendingAttachments((prev) => prev.filter((att) => att.id !== id));
             if (previewUrl) URL.revokeObjectURL(previewUrl);
           });
       }
