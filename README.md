@@ -2,7 +2,7 @@
 
 Your [OpenClaw](https://github.com/grp06/openclaw) agents can now communicate through rich, interactive UI. No need to build features anymore — your agents are running the show.
 
-Outlet gives your agents a split-pane canvas alongside the chat. Instead of describing data in plain text, the agent renders spreadsheets, kanban boards, dashboards, and charts on the fly. You ask a question, and the agent decides the best way to visualize the answer. Every canvas element can be clickable, turning the UI into a conversation. The agent handles the intelligence; Outlet handles the presentation.
+Outlet gives your agents a split-pane visualization panel alongside the chat. Instead of describing data in plain text, the agent renders spreadsheets, kanban boards, dashboards, and charts on the fly. You ask a question, and the agent decides the best way to visualize the answer. Every element can be clickable, turning the UI into a conversation. The agent handles the intelligence; Outlet handles the presentation.
 
 ### Kanban Board
 ![Kanban view — investor report project broken into phases with clickable cards](assets/kanban-demo.png)
@@ -19,15 +19,15 @@ Traditional agent UIs are chat-only: the agent describes data in plain text, and
 
 Instead of summarizing 24 months of revenue data in a paragraph, the agent renders a full spreadsheet. Instead of listing project tasks in bullet points, it produces an interactive kanban board. Instead of describing metrics, it builds a live dashboard with charts.
 
-**You don't need to build features anymore.** The agent decides what visualization fits the data and renders it on the fly. Need a project tracker? Just ask. Need a data comparison table? Just ask. The canvas handles presentation; the agent handles intelligence. Every canvas element can include a `prompt` field — click a kanban card, and it sends a follow-up question to the agent automatically. The UI becomes conversational.
+**You don't need to build features anymore.** The agent decides what visualization fits the data and renders it on the fly. Need a project tracker? Just ask. Need a data comparison table? Just ask. Outlet handles presentation; the agent handles intelligence. Every element can include a `prompt` field — click a kanban card, and it sends a follow-up question to the agent automatically. The UI becomes conversational.
 
-This also means OpenClaw can monitor and surface information proactively. The same canvas protocol that renders a spreadsheet today can power alerts, status boards, and live dashboards tomorrow — all without writing a single line of feature code.
+This also means OpenClaw can monitor and surface information proactively. The same protocol that renders a spreadsheet today can power alerts, status boards, and live dashboards tomorrow — all without writing a single line of feature code.
 
 ## Status
 
-**Outlet is currently in test phase.** We're actively using it, iterating on the canvas protocol, and squashing bugs. We plan to publish it to [ClawHub](https://github.com/openclaw/clawhub) once stable.
+**Outlet is currently in test phase.** We're actively using it, iterating on the protocol, and squashing bugs. We plan to publish it to [ClawHub](https://github.com/openclaw/clawhub) once stable.
 
-More visualization types are coming — and contributions are very welcome. If you have ideas for new canvas body types (timeline, graph, calendar, etc.), open a PR or an issue.
+More visualization types are coming — and contributions are very welcome. If you have ideas for new body types (timeline, graph, calendar, etc.), open a PR or an issue.
 
 We're also working towards **remote access**, so you'll be able to connect to Outlet from anywhere, not just localhost.
 
@@ -61,7 +61,7 @@ npm run dev
 
 ### 3. Connect
 
-Open **http://localhost:3000**, enter your gateway URL and token, and start chatting. The agent will automatically use the canvas when it has structured data to show.
+Open **http://localhost:3000**, enter your gateway URL and token, and start chatting. The agent will automatically use the outlet panel when it has structured data to show.
 
 ### Environment Variables (optional)
 
@@ -87,19 +87,19 @@ This launches a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare
 
 ## How It Works
 
-Outlet wraps each message with context that tells the agent about the canvas panel and available visualization types. The agent responds with standard chat text **plus** fenced `` ```canvas `` blocks containing JSON. These blocks are automatically extracted and rendered in the right pane.
+Outlet wraps each message with context that tells the agent about the outlet panel and available visualization types. The agent responds with standard chat text **plus** fenced `` ```canvas `` blocks containing JSON. These blocks are automatically extracted and rendered in the right pane.
 
-No prompt engineering needed — Outlet injects the canvas protocol automatically. The agent learns the available visualization types and decides when to use them based on the data. The context prioritizes structured layouts (list, dashboard, kanban, spreadsheet, detail) so the agent picks the best fit rather than defaulting to plain markdown.
+No prompt engineering needed — Outlet injects the protocol automatically. The agent learns the available visualization types and decides when to use them based on the data. The context prioritizes structured layouts (list, dashboard, kanban, spreadsheet, detail) so the agent picks the best fit rather than defaulting to plain markdown.
 
 ### Markdown Everywhere
 
-Both chat messages and canvas content support full **GitHub Flavored Markdown** — headings, bold, italic, tables, code blocks, task lists, and more. Markdown isn't limited to the `markdown` canvas type: all text fields inside every body type (titles, subtitles, values, labels) support inline markdown formatting.
+Both chat messages and outlet panel content support full **GitHub Flavored Markdown** — headings, bold, italic, tables, code blocks, task lists, and more. Markdown isn't limited to the `markdown` body type: all text fields inside every layout (titles, subtitles, values, labels) support inline markdown formatting.
 
 ### Model & Token Display
 
 Each assistant message shows the model used and token counts (input/output) in small text at the bottom of the message card, when available from the gateway. This gives you visibility into cost and model routing without leaving the conversation.
 
-### Canvas Types
+### Outlet Panel Types
 
 | Type | Use For |
 |------|---------|
@@ -112,9 +112,9 @@ Each assistant message shows the model used and token counts (input/output) in s
 | **image** | Single image with caption |
 | **webpage** | Sandboxed iframe embed |
 
-Canvas elements with a `prompt` field become clickable — clicking sends that prompt to chat, making the canvas interactive.
+Elements with a `prompt` field become clickable — clicking sends that prompt to chat, making the outlet panel interactive.
 
-## Canvas JSON Format
+## Outlet JSON Format
 
 ```json
 {
@@ -150,8 +150,8 @@ npm run e2e        # E2E tests (playwright)
 
 We'd love help expanding Outlet's capabilities. Some ideas:
 
-- **New canvas types** — timeline, graph/network, calendar, tree view, code editor
-- **Canvas interactivity** — sorting, filtering, inline editing
+- **New layout types** — timeline, graph/network, calendar, tree view, code editor
+- **Outlet interactivity** — sorting, filtering, inline editing
 - **Remote access** — connecting to Outlet over the network
 - **Mobile layout** — responsive pane switching
 
@@ -162,7 +162,7 @@ Open an issue or PR on GitHub.
 - **Next.js 16** (App Router) + **React 19**
 - **Tailwind CSS v4** with design tokens
 - **TypeScript** (strict)
-- **Zod** for canvas payload validation
+- **Zod** for outlet payload validation
 - **Recharts** for dashboard charts
 - **lucide-react** icons
 
