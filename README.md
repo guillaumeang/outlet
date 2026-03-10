@@ -122,6 +122,15 @@ Supported formats: PNG, JPEG, GIF, WebP, PDF (25 MB per file, 100 MB total folde
 
 Elements with a `prompt` field become clickable — clicking sends that prompt to chat, making the outlet panel interactive.
 
+### Tools
+
+Tools are interactive mini-apps that live in the outlet panel. Unlike standard panel types, tools support live editing — the agent drafts content, you refine it inline.
+
+#### X / Twitter Post
+![X/Twitter tool — split-pane with chat on the left and tweet preview on the right](assets/x-tool-demo.png)
+
+Draft and preview tweets or threads. The agent generates the post, you edit text and images directly in the outlet panel, then publish. Supports threads with connected avatars, engagement stats, and image attachments.
+
 ## Outlet JSON Format
 
 ```json
