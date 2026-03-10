@@ -8,6 +8,7 @@ import {
   type RuntimeTerminalState,
 } from "@/features/agents/state/runtimeTerminalWorkflow";
 import {
+  extractMessageUsageMeta,
   formatMetaMarkdown,
   formatThinkingMarkdown,
   isUiMetadataPrefix,
@@ -278,12 +279,16 @@ export const planRuntimeChatEvent = (
         typeof thinkingStartedAtMs === "number"
           ? Math.max(0, assistantCompletionAt - thinkingStartedAtMs)
           : null;
+      const usageMeta = extractMessageUsageMeta(payload.message, payload);
       commands.push({
         kind: "appendOutput",
         line: formatMetaMarkdown({
           role: "assistant",
           timestamp: assistantCompletionAt,
           thinkingDurationMs,
+          model: usageMeta.model ?? agent?.model ?? null,
+          inputTokens: usageMeta.inputTokens,
+          outputTokens: usageMeta.outputTokens,
         }),
         transcript: {
           source: "runtime-chat",

@@ -458,17 +458,32 @@ export const formatMetaMarkdown = (meta: {
   role: "user" | "assistant";
   timestamp: number;
   thinkingDurationMs?: number | null;
+  model?: string | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
 }): string => {
   return `${META_PREFIX}${JSON.stringify({
     role: meta.role,
     timestamp: meta.timestamp,
     ...(typeof meta.thinkingDurationMs === "number" ? { thinkingDurationMs: meta.thinkingDurationMs } : {}),
+    ...(typeof meta.model === "string" && meta.model ? { model: meta.model } : {}),
+    ...(typeof meta.inputTokens === "number" ? { inputTokens: meta.inputTokens } : {}),
+    ...(typeof meta.outputTokens === "number" ? { outputTokens: meta.outputTokens } : {}),
   })}`;
+};
+
+export type ParsedMetaMarkdown = {
+  role: "user" | "assistant";
+  timestamp: number;
+  thinkingDurationMs?: number;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
 };
 
 export const parseMetaMarkdown = (
   line: string
-): { role: "user" | "assistant"; timestamp: number; thinkingDurationMs?: number } | null => {
+): ParsedMetaMarkdown | null => {
   if (!isMetaMarkdown(line)) return null;
   const raw = line.slice(META_PREFIX.length).trim();
   if (!raw) return null;
@@ -477,13 +492,20 @@ export const parseMetaMarkdown = (
     const role = parsed.role === "user" || parsed.role === "assistant" ? parsed.role : null;
     const timestamp = typeof parsed.timestamp === "number" ? parsed.timestamp : null;
     if (!role || !timestamp || !Number.isFinite(timestamp) || timestamp <= 0) return null;
-    const thinkingDurationMs =
-      typeof parsed.thinkingDurationMs === "number" && Number.isFinite(parsed.thinkingDurationMs)
-        ? parsed.thinkingDurationMs
-        : undefined;
-    return thinkingDurationMs !== undefined
-      ? { role, timestamp, thinkingDurationMs }
-      : { role, timestamp };
+    const result: ParsedMetaMarkdown = { role, timestamp };
+    if (typeof parsed.thinkingDurationMs === "number" && Number.isFinite(parsed.thinkingDurationMs)) {
+      result.thinkingDurationMs = parsed.thinkingDurationMs;
+    }
+    if (typeof parsed.model === "string" && parsed.model.trim()) {
+      result.model = parsed.model.trim();
+    }
+    if (typeof parsed.inputTokens === "number" && Number.isFinite(parsed.inputTokens)) {
+      result.inputTokens = parsed.inputTokens;
+    }
+    if (typeof parsed.outputTokens === "number" && Number.isFinite(parsed.outputTokens)) {
+      result.outputTokens = parsed.outputTokens;
+    }
+    return result;
   } catch {
     return null;
   }
@@ -506,15 +528,27 @@ export const parseToolMarkdown = (
 const OUTLET_CONTEXT = `[outlet]
 You are connected through Outlet, a split-pane canvas UI (chat left, canvas right). Because the user has a canvas panel, proactively volunteer MORE data than typical — show all results instead of summarizing, render metrics instead of describing them. Density is a feature; the canvas handles presentation.
 
+## Outlet panel
 Render structured data as a canvas block (auto-extracted to the right panel):
 \`\`\`canvas
 { "header": { "title": "..." }, "body": { "type": "<type>", ... } }
 \`\`\`
 
-Body types: list (items[]{title,subtitle,meta,badge,prompt}), dashboard (metrics[]{label,value,delta,deltaPositive}+charts[]{type:"bar"|"line"|"area"|"pie"|"combo",dataKey,lineKeys?,xKey,data}), kanban (columns[]{title,cards[]{title,subtitle,meta,prompt}}), detail (fields[]{label,value,prompt}), spreadsheet (columns[]{key,label?,align?:"left"|"center"|"right"}+rows[]{[key]:string|number|boolean|null}), markdown ({content}), image ({src,alt,caption}), webpage ({url,title}).
-For combo charts: dataKey is rendered as bars, lineKeys[] as overlay lines (e.g. dataKey:"revenue", lineKeys:["target","average"]).
+Choose the body type that best fits the data — do NOT default to markdown when a structured layout applies:
+- **list**: collections, search results, items → items[]{title,subtitle,meta,badge,prompt}
+- **dashboard**: metrics, KPIs, charts → metrics[]{label,value,delta,deltaPositive}+charts[]{type:"bar"|"line"|"area"|"pie"|"combo",dataKey,lineKeys?,xKey,data}
+- **kanban**: workflows, statuses, pipelines → columns[]{title,cards[]{title,subtitle,meta,prompt}}
+- **spreadsheet**: tabular data, comparisons → columns[]{key,label?,align?:"left"|"center"|"right"}+rows[]{[key]:value}
+- **detail**: single-entity info, key-value pairs → fields[]{label,value,prompt}
+- **markdown**: reports, documentation, long-form content → {content}
+- **image**: images → {src,alt,caption}
+- **webpage**: embedded pages → {url,title}
 
+For combo charts: dataKey is rendered as bars, lineKeys[] as overlay lines (e.g. dataKey:"revenue", lineKeys:["target","average"]).
 Add "prompt" to elements to make them clickable. Keep chat to 1-2 sentences; let the canvas carry the data.
+
+## Markdown
+The UI renders standard markdown + GFM everywhere. Use rich markdown freely in chat messages (**bold**, *italic*, headings, lists, tables, \`code\`, fenced code blocks). All text fields inside every canvas body type (titles, subtitles, values, content, labels) also support inline markdown, so you can bold, italicize, or add code spans within any layout — not just the markdown type.
 [/outlet]`;
 
 export const buildAgentInstruction = ({
@@ -567,3 +601,75 @@ export const isHeartbeatPrompt = (text: string) => {
 };
 
 export const isUiMetadataPrefix = (text: string) => UI_METADATA_PREFIX_RE.test(text);
+
+export type MessageUsageMeta = {
+  model?: string | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+};
+
+export const extractMessageUsageMeta = (
+  message: unknown,
+  payload?: unknown
+): MessageUsageMeta => {
+  const result: MessageUsageMeta = {};
+
+  const tryExtractFromRecord = (record: Record<string, unknown>) => {
+    // Model
+    if (!result.model && typeof record.model === "string" && record.model.trim()) {
+      result.model = record.model.trim();
+    }
+
+    // Usage — look for nested usage object
+    const usage =
+      record.usage && typeof record.usage === "object"
+        ? (record.usage as Record<string, unknown>)
+        : null;
+    if (usage) {
+      const inputTokens =
+        typeof usage.input_tokens === "number"
+          ? usage.input_tokens
+          : typeof usage.inputTokens === "number"
+            ? usage.inputTokens
+            : null;
+      const outputTokens =
+        typeof usage.output_tokens === "number"
+          ? usage.output_tokens
+          : typeof usage.outputTokens === "number"
+            ? usage.outputTokens
+            : null;
+      if (typeof inputTokens === "number" && !result.inputTokens) {
+        result.inputTokens = inputTokens;
+      }
+      if (typeof outputTokens === "number" && !result.outputTokens) {
+        result.outputTokens = outputTokens;
+      }
+    }
+
+    // Direct token fields
+    if (!result.inputTokens && typeof record.input_tokens === "number") {
+      result.inputTokens = record.input_tokens;
+    }
+    if (!result.inputTokens && typeof record.inputTokens === "number") {
+      result.inputTokens = record.inputTokens as number;
+    }
+    if (!result.outputTokens && typeof record.output_tokens === "number") {
+      result.outputTokens = record.output_tokens;
+    }
+    if (!result.outputTokens && typeof record.outputTokens === "number") {
+      result.outputTokens = record.outputTokens as number;
+    }
+  };
+
+  // Try message object
+  if (message && typeof message === "object") {
+    tryExtractFromRecord(message as Record<string, unknown>);
+  }
+
+  // Try payload object (some gateways put usage at the payload level)
+  if (payload && typeof payload === "object") {
+    tryExtractFromRecord(payload as Record<string, unknown>);
+  }
+
+  return result;
+};

@@ -13,11 +13,14 @@ type ItemMeta = {
   role: "user" | "assistant";
   timestampMs: number;
   thinkingDurationMs?: number;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
 };
 
 export type AgentChatItem =
   | { kind: "user"; text: string; timestampMs?: number }
-  | { kind: "assistant"; text: string; live?: boolean; timestampMs?: number; thinkingDurationMs?: number }
+  | { kind: "assistant"; text: string; live?: boolean; timestampMs?: number; thinkingDurationMs?: number; model?: string; inputTokens?: number; outputTokens?: number }
   | { kind: "tool"; text: string; timestampMs?: number }
   | { kind: "thinking"; text: string; live?: boolean; timestampMs?: number; thinkingDurationMs?: number };
 
@@ -33,6 +36,9 @@ export type AgentChatRenderBlock =
       timestampMs?: number;
       thinkingDurationMs?: number;
       traceEvents: AssistantTraceEvent[];
+      model?: string;
+      inputTokens?: number;
+      outputTokens?: number;
     };
 
 export type BuildAgentChatItemsInput = {
@@ -97,6 +103,9 @@ export const buildFinalAgentChatItems = ({
           role: parsed.role,
           timestampMs: parsed.timestamp,
           ...(typeof parsed.thinkingDurationMs === "number" ? { thinkingDurationMs: parsed.thinkingDurationMs } : {}),
+          ...(parsed.model ? { model: parsed.model } : {}),
+          ...(typeof parsed.inputTokens === "number" ? { inputTokens: parsed.inputTokens } : {}),
+          ...(typeof parsed.outputTokens === "number" ? { outputTokens: parsed.outputTokens } : {}),
         };
       }
       continue;
@@ -164,7 +173,13 @@ export const buildFinalAgentChatItems = ({
     items.push({
       kind: "assistant",
       text: normalizedAssistant,
-      ...(currentMeta ? { timestampMs: currentMeta.timestampMs, thinkingDurationMs: currentMeta.thinkingDurationMs } : {}),
+      ...(currentMeta ? {
+        timestampMs: currentMeta.timestampMs,
+        thinkingDurationMs: currentMeta.thinkingDurationMs,
+        ...(currentMeta.model ? { model: currentMeta.model } : {}),
+        ...(typeof currentMeta.inputTokens === "number" ? { inputTokens: currentMeta.inputTokens } : {}),
+        ...(typeof currentMeta.outputTokens === "number" ? { outputTokens: currentMeta.outputTokens } : {}),
+      } : {}),
     });
   }
   return items;
@@ -218,6 +233,9 @@ export const buildAgentChatItems = ({
           role: parsed.role,
           timestampMs: parsed.timestamp,
           ...(typeof parsed.thinkingDurationMs === "number" ? { thinkingDurationMs: parsed.thinkingDurationMs } : {}),
+          ...(parsed.model ? { model: parsed.model } : {}),
+          ...(typeof parsed.inputTokens === "number" ? { inputTokens: parsed.inputTokens } : {}),
+          ...(typeof parsed.outputTokens === "number" ? { outputTokens: parsed.outputTokens } : {}),
         };
       }
       continue;
@@ -260,7 +278,13 @@ export const buildAgentChatItems = ({
     items.push({
       kind: "assistant",
       text: normalizedAssistant,
-      ...(currentMeta ? { timestampMs: currentMeta.timestampMs, thinkingDurationMs: currentMeta.thinkingDurationMs } : {}),
+      ...(currentMeta ? {
+        timestampMs: currentMeta.timestampMs,
+        thinkingDurationMs: currentMeta.thinkingDurationMs,
+        ...(currentMeta.model ? { model: currentMeta.model } : {}),
+        ...(typeof currentMeta.inputTokens === "number" ? { inputTokens: currentMeta.inputTokens } : {}),
+        ...(typeof currentMeta.outputTokens === "number" ? { outputTokens: currentMeta.outputTokens } : {}),
+      } : {}),
     });
   }
 
@@ -326,6 +350,9 @@ export const buildAgentChatRenderBlocks = (
   const ensureAssistant = (meta?: {
     timestampMs?: number;
     thinkingDurationMs?: number;
+    model?: string;
+    inputTokens?: number;
+    outputTokens?: number;
   }) => {
     if (!currentAssistant) {
       currentAssistant = {
@@ -336,6 +363,9 @@ export const buildAgentChatRenderBlocks = (
         ...(typeof meta?.thinkingDurationMs === "number"
           ? { thinkingDurationMs: meta.thinkingDurationMs }
           : {}),
+        ...(meta?.model ? { model: meta.model } : {}),
+        ...(typeof meta?.inputTokens === "number" ? { inputTokens: meta.inputTokens } : {}),
+        ...(typeof meta?.outputTokens === "number" ? { outputTokens: meta.outputTokens } : {}),
       };
       return currentAssistant;
     }
@@ -352,6 +382,9 @@ export const buildAgentChatRenderBlocks = (
         ...(typeof meta?.thinkingDurationMs === "number"
           ? { thinkingDurationMs: meta.thinkingDurationMs }
           : {}),
+        ...(meta?.model ? { model: meta.model } : {}),
+        ...(typeof meta?.inputTokens === "number" ? { inputTokens: meta.inputTokens } : {}),
+        ...(typeof meta?.outputTokens === "number" ? { outputTokens: meta.outputTokens } : {}),
       };
       return currentAssistant;
     }
@@ -363,6 +396,15 @@ export const buildAgentChatRenderBlocks = (
     }
     if (typeof meta?.thinkingDurationMs === "number") {
       currentAssistant.thinkingDurationMs = meta.thinkingDurationMs;
+    }
+    if (meta?.model && !currentAssistant.model) {
+      currentAssistant.model = meta.model;
+    }
+    if (typeof meta?.inputTokens === "number" && !currentAssistant.inputTokens) {
+      currentAssistant.inputTokens = meta.inputTokens;
+    }
+    if (typeof meta?.outputTokens === "number" && !currentAssistant.outputTokens) {
+      currentAssistant.outputTokens = meta.outputTokens;
     }
     return currentAssistant;
   };
@@ -392,6 +434,9 @@ export const buildAgentChatRenderBlocks = (
     const assistant = ensureAssistant({
       timestampMs: item.timestampMs,
       thinkingDurationMs: item.thinkingDurationMs,
+      ...(item.kind === "assistant" && item.model ? { model: item.model } : {}),
+      ...(item.kind === "assistant" && typeof item.inputTokens === "number" ? { inputTokens: item.inputTokens } : {}),
+      ...(item.kind === "assistant" && typeof item.outputTokens === "number" ? { outputTokens: item.outputTokens } : {}),
     });
     const normalized = item.text.trim();
     if (!normalized) continue;

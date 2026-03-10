@@ -87,9 +87,17 @@ This launches a [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare
 
 ## How It Works
 
-Outlet wraps each message with context that tells the agent about the canvas panel. The agent responds with standard chat text **plus** fenced `` ```canvas `` blocks containing JSON. These blocks are automatically extracted and rendered in the right pane.
+Outlet wraps each message with context that tells the agent about the canvas panel and available visualization types. The agent responds with standard chat text **plus** fenced `` ```canvas `` blocks containing JSON. These blocks are automatically extracted and rendered in the right pane.
 
-No prompt engineering needed — Outlet injects the canvas protocol automatically. The agent learns the available visualization types and decides when to use them based on the data.
+No prompt engineering needed — Outlet injects the canvas protocol automatically. The agent learns the available visualization types and decides when to use them based on the data. The context prioritizes structured layouts (list, dashboard, kanban, spreadsheet, detail) so the agent picks the best fit rather than defaulting to plain markdown.
+
+### Markdown Everywhere
+
+Both chat messages and canvas content support full **GitHub Flavored Markdown** — headings, bold, italic, tables, code blocks, task lists, and more. Markdown isn't limited to the `markdown` canvas type: all text fields inside every body type (titles, subtitles, values, labels) support inline markdown formatting.
+
+### Model & Token Display
+
+Each assistant message shows the model used and token counts (input/output) in small text at the bottom of the message card, when available from the gateway. This gives you visibility into cost and model routing without leaving the conversation.
 
 ### Canvas Types
 

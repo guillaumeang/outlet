@@ -8,6 +8,8 @@ describe("buildAgentInstruction", () => {
       message: "Ship it",
     });
 
-    expect(message).toBe("Ship it");
+    expect(message).toContain("[outlet]");
+    expect(message).toContain("[/outlet]");
+    expect(message).toMatch(/Ship it$/);
   });
 });

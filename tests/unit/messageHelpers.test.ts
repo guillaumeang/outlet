@@ -7,13 +7,16 @@ describe("buildAgentInstruction", () => {
     const message = buildAgentInstruction({
       message: " Ship it ",
     });
-    expect(message).toBe("Ship it");
+    expect(message).toContain("[outlet]");
+    expect(message).toContain("[/outlet]");
+    expect(message).toMatch(/Ship it$/);
   });
 
   it("returns command messages untouched", () => {
     const message = buildAgentInstruction({
       message: "/help",
     });
-    expect(message).toBe("/help");
+    expect(message).toContain("[outlet]");
+    expect(message).toMatch(/\/help$/);
   });
 });

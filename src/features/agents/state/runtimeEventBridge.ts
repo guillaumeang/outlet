@@ -1,5 +1,6 @@
 import type { AgentState } from "./store";
 import {
+  extractMessageUsageMeta,
   extractText,
   extractThinking,
   extractToolLines,
@@ -281,7 +282,14 @@ export const buildHistoryLines = (messages: ChatHistoryMessage[]): HistoryLinesR
         lastAssistantAt = at;
       }
       if (typeof at === "number") {
-        lines.push(formatMetaMarkdown({ role: "assistant", timestamp: at }));
+        const historyUsageMeta = extractMessageUsageMeta(message);
+        lines.push(formatMetaMarkdown({
+          role: "assistant",
+          timestamp: at,
+          model: historyUsageMeta.model,
+          inputTokens: historyUsageMeta.inputTokens,
+          outputTokens: historyUsageMeta.outputTokens,
+        }));
       }
       if (thinking) {
         lines.push(thinking);

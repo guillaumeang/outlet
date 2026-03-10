@@ -13,7 +13,7 @@ import {
 import type { AgentState as AgentRecord } from "@/features/agents/state/store";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUp, Check, ChevronRight, Clock, Cog, LayoutGrid, Pencil, RefreshCw, Shuffle, Square, X } from "lucide-react";
+import { ArrowUp, Check, ChevronRight, Clock, Cog, Pencil, Plus, RefreshCw, Shuffle, Square, X } from "lucide-react";
 import type { GatewayModelChoice } from "@/lib/gateway/models";
 import { rewriteMediaLinesToMarkdown } from "@/lib/text/media-markdown";
 import { normalizeAssistantDisplayText } from "@/lib/text/assistantText";
@@ -64,6 +64,21 @@ const formatDurationLabel = (durationMs: number): string => {
   if (!Number.isFinite(seconds) || seconds <= 0) return "0.0s";
   if (seconds < 10) return `${seconds.toFixed(1)}s`;
   return `${Math.round(seconds)}s`;
+};
+
+const formatTokenCount = (count: number): string => {
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1)}k`;
+  return String(count);
+};
+
+const shortenModelName = (model: string): string => {
+  // e.g. "claude-3-5-sonnet-20241022" → "claude-3.5-sonnet"
+  // e.g. "claude-sonnet-4-20250514" → "claude-sonnet-4"
+  const cleaned = model
+    .replace(/-\d{8}$/, "") // strip date suffix
+    .replace(/-\d{4}-\d{2}-\d{2}$/, ""); // strip date suffix variant
+  return cleaned;
 };
 
 const SPINE_LEFT = "left-[15px]";
@@ -387,6 +402,9 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
   thinkingDurationMs,
   contentText,
   streaming,
+  model,
+  inputTokens,
+  outputTokens,
 }: {
   avatarSeed: string;
   avatarUrl: string | null;
@@ -398,6 +416,9 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
   thinkingDurationMs?: number;
   contentText?: string | null;
   streaming?: boolean;
+  model?: string;
+  inputTokens?: number;
+  outputTokens?: number;
 }) {
   const resolvedTimestamp = typeof timestampMs === "number" ? timestampMs : null;
   const hasThinking = Boolean(
@@ -475,7 +496,7 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
             ) : null}
 
             {contentText ? (
-              <div className="ui-chat-assistant-card">
+              <div className="ui-chat-assistant-card relative pb-[1.2rem]">
                 {streaming ? (
                   (() => {
                     if (!contentText.includes("MEDIA:")) {
@@ -506,12 +527,31 @@ const AssistantMessageCard = memo(function AssistantMessageCard({
                     </ReactMarkdown>
                   </div>
                 )}
-                {!streaming && hasCanvasBlock(contentText) ? (
-                  <div className="mt-2 inline-flex items-center gap-1 rounded-md bg-surface-3 px-2 py-0.5 font-mono text-[9px] text-muted-foreground/70">
-                    <LayoutGrid className="h-2.5 w-2.5" aria-hidden="true" />
-                    canvas attached
-                  </div>
-                ) : null}
+                <div>
+                  {!streaming && hasCanvasBlock(contentText) ? (
+                    <div className="absolute bottom-[0.3rem] left-[1.08rem] flex items-center gap-1 font-mono text-[9px] leading-none text-muted-foreground/50 dark:left-[1.2rem]">
+                      <span className="flex h-[9px] w-[9px] items-center justify-center rounded-full ring-[1px] ring-current">
+                        <Plus className="h-[7px] w-[7px]" strokeWidth={2.5} aria-hidden="true" />
+                      </span>
+                      outlet added
+                    </div>
+                  ) : null}
+                  {!streaming && (model || typeof inputTokens === "number" || typeof outputTokens === "number") ? (
+                    <div className="absolute bottom-[0.3rem] right-[1.08rem] flex items-center gap-1.5 font-mono text-[9px] leading-none text-muted-foreground/50 dark:right-[1.2rem]">
+                      {model ? <span>{shortenModelName(model)}</span> : null}
+                      {model && (typeof inputTokens === "number" || typeof outputTokens === "number") ? (
+                        <span aria-hidden="true">·</span>
+                      ) : null}
+                      {typeof inputTokens === "number" || typeof outputTokens === "number" ? (
+                        <span>
+                          {typeof inputTokens === "number" ? `${formatTokenCount(inputTokens)} in` : ""}
+                          {typeof inputTokens === "number" && typeof outputTokens === "number" ? " / " : ""}
+                          {typeof outputTokens === "number" ? `${formatTokenCount(outputTokens)} out` : ""}
+                        </span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </div>
@@ -597,6 +637,9 @@ const AgentChatFinalItems = memo(function AgentChatFinalItems({
             thinkingDurationMs={block.thinkingDurationMs}
             contentText={block.text}
             streaming={streaming}
+            model={block.model}
+            inputTokens={block.inputTokens}
+            outputTokens={block.outputTokens}
           />
         );
       })}
