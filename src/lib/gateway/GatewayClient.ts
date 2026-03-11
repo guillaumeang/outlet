@@ -53,7 +53,14 @@ export type GatewayFrame = ReqFrame | ResFrame | EventFrame;
 
 export const parseGatewayFrame = (raw: string): GatewayFrame | null => {
   try {
-    return JSON.parse(raw) as GatewayFrame;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const obj = parsed as Record<string, unknown>;
+    const type = obj.type;
+    if (type === "req" || type === "res" || type === "event") {
+      return obj as unknown as GatewayFrame;
+    }
+    return null;
   } catch {
     return null;
   }

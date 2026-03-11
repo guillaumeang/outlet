@@ -224,14 +224,16 @@ export function useChatInteractionController(
 
       setStopBusyAgentId(agentId);
       stopBusyAgentIdRef.current = agentId;
+      console.info("[stop] Sending chat.abort for session:", stopIntent.sessionKey);
       try {
         await params.client.call("chat.abort", {
           sessionKey: stopIntent.sessionKey,
         });
+        console.info("[stop] chat.abort acknowledged by gateway");
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to stop run.";
         params.setError(message);
-        console.error(message);
+        console.error("[stop] chat.abort failed:", message);
         params.dispatch({
           type: "appendOutput",
           agentId,

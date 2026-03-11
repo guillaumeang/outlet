@@ -1,4 +1,5 @@
 const { URL } = require("node:url");
+const crypto = require("node:crypto");
 
 const parseCookies = (header) => {
   const raw = typeof header === "string" ? header : "";
@@ -15,13 +16,24 @@ const parseCookies = (header) => {
   return out;
 };
 
+/**
+ * Timing-safe string comparison to prevent timing attacks on token validation.
+ * Returns true only when both strings are non-empty and equal.
+ */
+const timingSafeEqual = (a, b) => {
+  if (typeof a !== "string" || typeof b !== "string") return false;
+  if (a.length === 0 || b.length === 0) return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+};
+
 const buildRedirectUrl = (req, nextPathWithQuery) => {
-  const host = req.headers?.host || "localhost";
-  const proto =
-    String(req.headers?.["x-forwarded-proto"] || "").toLowerCase() === "https"
-      ? "https"
-      : "http";
-  return `${proto}://${host}${nextPathWithQuery}`;
+  // Use only the pathname+query from the parsed URL — never trust the Host header
+  // for redirect targets. The redirect is always relative to the same origin.
+  // Browsers resolve relative Location headers against the request origin.
+  return nextPathWithQuery;
 };
 
 function createAccessGate(options) {
@@ -35,7 +47,8 @@ function createAccessGate(options) {
     if (!enabled) return true;
     const cookieHeader = req.headers?.cookie;
     const cookies = parseCookies(cookieHeader);
-    return cookies[cookieName] === token;
+    const cookieValue = cookies[cookieName];
+    return timingSafeEqual(cookieValue || "", token);
   };
 
   const handleHttp = (req, res) => {
@@ -45,7 +58,7 @@ function createAccessGate(options) {
     const provided = url.searchParams.get(queryParam);
 
     if (provided !== null) {
-      if (provided !== token) {
+      if (!timingSafeEqual(provided, token)) {
         res.statusCode = 401;
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify({ error: "Invalid Studio access token." }));
@@ -53,7 +66,10 @@ function createAccessGate(options) {
       }
 
       url.searchParams.delete(queryParam);
-      const cookieValue = `${cookieName}=${token}; HttpOnly; Path=/; SameSite=Lax`;
+      const isHttps =
+        String(req.headers?.["x-forwarded-proto"] || "").toLowerCase() === "https";
+      const secureFlag = isHttps ? " Secure;" : "";
+      const cookieValue = `${cookieName}=${token}; HttpOnly;${secureFlag} Path=/; SameSite=Lax`;
       res.statusCode = 302;
       res.setHeader("Set-Cookie", cookieValue);
       res.setHeader("Location", buildRedirectUrl(req, url.pathname + url.search));
@@ -61,18 +77,17 @@ function createAccessGate(options) {
       return true;
     }
 
-    if (url.pathname.startsWith("/api/")) {
-      if (!isAuthorized(req)) {
-        res.statusCode = 401;
-        res.setHeader("Content-Type", "application/json");
-        res.end(
-          JSON.stringify({
-            error:
-              "Studio access token required. Open /?access_token=... once to set a cookie.",
-          })
-        );
-        return true;
-      }
+    // Guard ALL routes when access token is configured, not just /api/
+    if (!isAuthorized(req)) {
+      res.statusCode = 401;
+      res.setHeader("Content-Type", "application/json");
+      res.end(
+        JSON.stringify({
+          error:
+            "Studio access token required. Open /?access_token=... once to set a cookie.",
+        })
+      );
+      return true;
     }
 
     return false;

@@ -20,13 +20,13 @@ function hashString(s: string): string {
 // Accept both multi-line and single-line canvas fenced blocks:
 //   ```canvas\n{...}\n```   (standard)
 //   ```canvas {...} ```     (inline / agent formatting quirk)
-const CANVAS_FENCE_RE = /`{3,}canvas\s*\n?([\s\S]*?)\n?\s*`{3,}/g;
+// Pattern kept as a constant string; new RegExp instances created per call
+// to avoid shared mutable lastIndex state.
+const CANVAS_FENCE_PATTERN = /`{3,}canvas\s*\n?([\s\S]*?)\n?\s*`{3,}/g;
 
 function extractCanvasBlocks(text: string): string[] {
   const results: string[] = [];
-  CANVAS_FENCE_RE.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = CANVAS_FENCE_RE.exec(text)) !== null) {
+  for (const match of text.matchAll(new RegExp(CANVAS_FENCE_PATTERN.source, "g"))) {
     const raw = match[1]?.trim();
     if (raw) results.push(raw);
   }
@@ -54,8 +54,7 @@ function parseCanvasPayload(json: string): CanvasPayload | null {
  * Works on both single outputLines and multi-line text.
  */
 export function hasCanvasBlock(text: string): boolean {
-  CANVAS_FENCE_RE.lastIndex = 0;
-  return CANVAS_FENCE_RE.test(text);
+  return new RegExp(CANVAS_FENCE_PATTERN.source).test(text);
 }
 
 /**
@@ -63,8 +62,7 @@ export function hasCanvasBlock(text: string): boolean {
  * Used to hide canvas blocks from the chat transcript display.
  */
 export function stripCanvasBlocks(text: string): string {
-  CANVAS_FENCE_RE.lastIndex = 0;
-  return text.replace(CANVAS_FENCE_RE, "").trim();
+  return text.replace(new RegExp(CANVAS_FENCE_PATTERN.source, "g"), "").trim();
 }
 
 /**

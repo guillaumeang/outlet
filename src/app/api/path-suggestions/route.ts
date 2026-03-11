@@ -114,8 +114,12 @@ export async function GET(request: Request) {
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to list path suggestions.";
-    console.error(message);
-    const status = message.includes("does not exist") ? 404 : 400;
-    return NextResponse.json({ error: message }, { status });
+    // Log full error server-side; send sanitized message to client to avoid path disclosure
+    console.error("[path-suggestions]", message);
+    const isNotFound = message.includes("does not exist");
+    const safeMessage = isNotFound
+      ? "Directory does not exist."
+      : "Failed to list path suggestions.";
+    return NextResponse.json({ error: safeMessage }, { status: isNotFound ? 404 : 400 });
   }
 }

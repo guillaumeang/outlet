@@ -70,7 +70,9 @@ describe("/api/path-suggestions route", () => {
     const body = (await response.json()) as { error: string };
 
     expect(response.status).toBe(400);
-    expect(body.error).toMatch(/home/i);
+    // Client-facing error should NOT leak filesystem paths (sanitized)
+    expect(body.error).toBe("Failed to list path suggestions.");
+    // Full error with path details should still be logged server-side
     expect(consoleErrorSpy).toHaveBeenCalled();
   });
 

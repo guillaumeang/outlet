@@ -335,7 +335,7 @@ describe("useChatInteractionController", () => {
     });
 
     expect(ctx.setError).toHaveBeenCalledWith("abort failed");
-    expect(logSpy).toHaveBeenCalledWith("abort failed");
+    expect(logSpy).toHaveBeenCalledWith("[stop] chat.abort failed:", "abort failed");
     expect(ctx.dispatch).toHaveBeenCalledWith({
       type: "appendOutput",
       agentId: "agent-1",

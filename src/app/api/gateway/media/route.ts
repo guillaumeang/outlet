@@ -57,7 +57,7 @@ const resolveAndValidateLocalMediaPath = (raw: string): { resolved: string; mime
   const allowedRoot = path.join(os.homedir(), ".openclaw");
   const allowedPrefix = `${allowedRoot}${path.sep}`;
   if (!(resolved === allowedRoot || resolved.startsWith(allowedPrefix))) {
-    throw new Error(`Refusing to read media outside ${allowedRoot}`);
+    throw new Error("Refusing to read media outside ~/.openclaw");
   }
 
   return { resolved, mime };
@@ -70,14 +70,34 @@ const validateRemoteMediaPath = (raw: string): { remotePath: string; mime: strin
     throw new Error("path must be absolute or start with ~/");
   }
 
-  // Remote side enforces ~/.openclaw; this guard lets Studio on macOS request
-  // /home/ubuntu/.openclaw/... without tripping local homedir checks.
-  const normalized = trimmed.replaceAll("\\\\", "/");
-  const inOpenclaw =
-    normalized === "~/.openclaw" ||
-    normalized.startsWith("~/.openclaw/") ||
-    normalized.includes("/.openclaw/");
-  if (!inOpenclaw) {
+  // Normalize path separators for consistent checking.
+  // Use posix path operations: resolve ".." segments to prevent traversal
+  // like /home/user/.openclaw/../../etc/passwd
+  const normalized = trimmed.replaceAll("\\", "/");
+
+  // For tilde paths, check prefix directly
+  if (normalized === "~/.openclaw" || normalized.startsWith("~/.openclaw/")) {
+    // Verify no traversal escapes the directory after normalization
+    const afterPrefix = normalized.slice("~/.openclaw".length);
+    if (afterPrefix && afterPrefix.includes("/../")) {
+      throw new Error("Refusing to read remote media outside ~/.openclaw");
+    }
+    return { remotePath: trimmed, mime };
+  }
+
+  // For absolute paths, ensure /.openclaw/ appears as a proper path segment
+  // after the homedir, not just anywhere in the string.
+  // Match: /any/homedir/.openclaw/... (the segment before .openclaw must be
+  // a plausible homedir, not an attacker-controlled directory)
+  const openclawSegment = "/.openclaw/";
+  const idx = normalized.indexOf(openclawSegment);
+  if (idx === -1) {
+    throw new Error("Refusing to read remote media outside ~/.openclaw");
+  }
+
+  // Verify no ".." traversal after the .openclaw segment
+  const afterOpenclaw = normalized.slice(idx + openclawSegment.length);
+  if (afterOpenclaw.split("/").some((seg) => seg === "..")) {
     throw new Error("Refusing to read remote media outside ~/.openclaw");
   }
 
@@ -212,6 +232,12 @@ export async function GET(request: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to fetch media";
-    return NextResponse.json({ error: message }, { status: 400 });
+    // Log full error server-side; strip filesystem paths from client response
+    console.error("[media]", message);
+    // Sanitize: remove any absolute paths from the error message
+    const safeMessage = message
+      .replace(/\/[^\s"',)]+/g, "<path>")
+      .replace(/~\/[^\s"',)]+/g, "<path>");
+    return NextResponse.json({ error: safeMessage }, { status: 400 });
   }
 }

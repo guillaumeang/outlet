@@ -88,7 +88,9 @@ const KanbanBodySchema = z.object({
 
 const WebpageBodySchema = z.object({
   type: z.literal("webpage"),
-  url: z.string(),
+  url: z.string().url().refine((u) => /^https?:\/\//i.test(u), {
+    message: "Only http:// and https:// URLs are allowed",
+  }),
   title: z.string().optional(),
 });
 

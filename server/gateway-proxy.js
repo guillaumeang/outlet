@@ -91,7 +91,8 @@ function createGatewayProxy(options) {
     throw new Error("createGatewayProxy requires loadUpstreamSettings().");
   }
 
-  const wss = new WebSocketServer({ noServer: true });
+  // Limit incoming WebSocket message size to 4 MB to prevent memory exhaustion
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 4 * 1024 * 1024 });
 
   wss.on("connection", (browserWs) => {
     let upstreamWs = null;

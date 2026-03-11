@@ -1181,14 +1181,14 @@ const AgentChatComposer = memo(function AgentChatComposer({
         />
         {running ? (
           <button
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-border/70 bg-surface-3 text-foreground transition hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40"
+            className="ui-btn-icon-danger flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[color:var(--danger-soft-border)] transition disabled:cursor-not-allowed disabled:opacity-40"
             type="button"
             onClick={onStop}
             disabled={stopDisabled}
             aria-label={stopAriaLabel}
-            title={stopReason || "Stop"}
+            title={stopReason || "Stop (Esc)"}
           >
-            <Square className={`h-3.5 w-3.5 ${stopBusy ? "animate-pulse" : ""}`} />
+            <Square className={`h-3.5 w-3.5 fill-current ${stopBusy ? "animate-pulse" : ""}`} />
           </button>
         ) : null}
         <button
@@ -1597,6 +1597,21 @@ export const AgentChatPanel = ({
   const handleComposerSend = useCallback(() => {
     handleSend(draftValue);
   }, [draftValue, handleSend]);
+
+  // Escape key triggers stop when agent is running
+  useEffect(() => {
+    if (!running || !canSend) return;
+    const handleGlobalEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      // Don't intercept Escape when composing, renaming, or in a modal
+      if (event.defaultPrevented) return;
+      if (renameEditing) return;
+      event.preventDefault();
+      onStopRun();
+    };
+    document.addEventListener("keydown", handleGlobalEscape);
+    return () => document.removeEventListener("keydown", handleGlobalEscape);
+  }, [running, canSend, onStopRun, renameEditing]);
 
   const beginRename = useCallback(() => {
     if (!onRename) return;
