@@ -6,9 +6,17 @@ const TwitterAuthorSchema = z.object({
   avatar: z.string().optional(),
 });
 
+const TwitterMediaItemSchema = z.object({
+  url: z.string(),
+  type: z.enum(["image"]),
+});
+
 const TwitterPostSchema = z.object({
   text: z.string(),
+  /** @deprecated Use `media` instead. Kept for backward compatibility. */
   image: z.string().optional(),
+  /** Multi-image attachments. */
+  media: z.array(TwitterMediaItemSchema).optional(),
   likes: z.number().optional(),
   retweets: z.number().optional(),
   replies: z.number().optional(),
@@ -23,3 +31,4 @@ export const TwitterPostToolDataSchema = z.object({
 export type TwitterPostToolData = z.infer<typeof TwitterPostToolDataSchema>;
 export type TwitterAuthor = z.infer<typeof TwitterAuthorSchema>;
 export type TwitterPost = z.infer<typeof TwitterPostSchema>;
+export type TwitterMediaItem = z.infer<typeof TwitterMediaItemSchema>;

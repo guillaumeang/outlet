@@ -562,7 +562,7 @@ Load interactive tool mini-apps in the outlet panel using type "tool":
 \`\`\`
 
 Available tools:
-- **twitter-post**: Twitter/X post & thread previewer. Data: { author: { name, handle, avatar? }, posts: [{ text, image?, likes?, retweets?, replies?, timestamp? }] }. The user can edit text and images directly.
+- **twitter-post**: Twitter/X post & thread previewer. Data: { author: { name, handle, avatar? }, posts: [{ text, media?: [{ url, type: "image" }], likes?, retweets?, replies?, timestamp? }] }. The user can edit text and add/remove images directly (up to 4 per tweet). Legacy "image" field still accepted but prefer "media" array.
 
 ### Incremental updates
 To update an existing tool without replacing all its data, add "update": true:

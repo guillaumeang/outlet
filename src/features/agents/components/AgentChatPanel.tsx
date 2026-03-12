@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import type { AttachmentRef } from "@/lib/text/message-extract";
+import { ALLOWED_UPLOAD_TYPES, uploadFile } from "@/lib/upload";
 import type { AgentState as AgentRecord } from "@/features/agents/state/store";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -975,26 +976,9 @@ const InlineHoverTooltip = ({
 
 type PendingAttachment = AttachmentRef & { id: string; previewUrl?: string; displayName: string };
 
-const ALLOWED_UPLOAD_TYPES = new Set([
-  "image/png", "image/jpeg", "image/gif", "image/webp", "application/pdf",
-]);
-
 let attachmentCounter = 0;
 function nextAttachmentId(): string {
   return `att-${Date.now()}-${++attachmentCounter}`;
-}
-
-async function uploadFile(file: File): Promise<AttachmentRef> {
-  const form = new FormData();
-  form.append("file", file);
-  const res = await fetch("/api/gateway/upload", { method: "POST", body: form });
-  if (!res.ok) {
-    let message = "Upload failed";
-    try { const json = await res.json(); message = json.error ?? message; } catch { /* non-JSON response */ }
-    throw new Error(message);
-  }
-  const json = await res.json();
-  return { path: json.path, mime: json.mime, filename: json.filename };
 }
 
 const AgentChatComposer = memo(function AgentChatComposer({
